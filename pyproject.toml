@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "authit-py"
+name = "eventit-py"
 version = "0.1.0"
 description = ""
 authors = ["Alexander Lukens <alexdlukens@gmail.com>"]
 readme = "README.md"
-packages = [{include = "authit_py", from = "src"}]
+packages = [{include = "eventit_py", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"

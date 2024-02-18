@@ -4,15 +4,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 BACKEND_TYPES = ["mongodb", "filepath"]
-DEFAULT_LOG_FILEPATH = "authit.log"
+DEFAULT_LOG_FILEPATH = "eventit.log"
 
 
-class BaseAuthitPlugin:
+class BaseEventLogger:
     def __init__(self, **kwargs) -> None:
         self.chosen_backend = None
         self.db_client = None
         self.db_config = {}
-        logger.debug("In BaseAuthitPlugin Constructor")
+        logger.debug("In BaseEventLogger Constructor")
         if "MONGO_URL" in kwargs:
             try:
                 from pymongo import MongoClient
@@ -35,7 +35,7 @@ class BaseAuthitPlugin:
             self.db_client = open(self.filepath, "a", encoding="utf-8")
             logger.debug("Opened %s file as backend", self.filepath)
 
-        logger.debug("BaseAuthitPlugin configuration complete")
+        logger.debug("BaseEventLogger configuration complete")
 
     def __del__(self):
         if self.chosen_backend == "filepath":
