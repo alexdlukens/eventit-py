@@ -1,16 +1,10 @@
-# AuthIT Library for Python
+# EventIT Library for Python
 
-Integrating anonymous authentication with invoicing for web-apps
+This repo is intended to be the core event tracking framework that will be built-upon in other applications (e.g. Authentication event tracking, logs, etc.)
 
 ## Overview
 
-This project is intended to provide "route event" tracking on a per-user basis. Each user will be provided with a distinct api-key that is sent with each request to identify the user. In a database, we will record the "events" performed by each user. A dashboard will be made to allow admins to see traffic per-route, and per-user
-
-In the future, "invoicing" or "pricing" can be attributed to each API route. We can then help apps track usage via the events recorded, per-user.
-
-This can be expanded upon with groups, automated email summaries about usage, etc.
-
-Emphasis to be made on minimal "user" information recorded to get a user account up and started. Just request a new api key from an endpoint, and start using it. Can integrate with Flask-Login extension in the future.
+Pass for now
 
 ## Developer details
 
