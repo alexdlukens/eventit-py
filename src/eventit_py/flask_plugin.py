@@ -3,10 +3,9 @@ import json
 import logging
 from typing import Any
 
-from flask import Blueprint, request
-
 from authit_py.base_plugin import BaseAuthitPlugin
 from authit_py.pydantic_events import BaseEvent
+from flask import Blueprint, request
 
 logger = logging.getLogger(__name__)
 

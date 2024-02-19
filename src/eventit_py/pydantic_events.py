@@ -1,8 +1,8 @@
 import datetime
 import logging
-from typing import Any, Optional
+from typing import Optional
 
-from pydantic import AwareDatetime, BaseModel, field_serializer, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 
 DEFAULT_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S %Z"
 
@@ -16,12 +16,12 @@ class BaseEvent(BaseModel):
 
     user: Optional[str] = None
     group: Optional[str] = None
-    route: str
-    timestamp: AwareDatetime
+    timestamp: datetime.datetime
 
     @field_validator("timestamp")
     def ensure_utc_timezone(cls, value: datetime.datetime):
-        if value.utcoffset().total_seconds() != 0:
+        utc_offset = value.utcoffset()
+        if utc_offset is not None:
             value = value.astimezone(datetime.timezone.utc)
         return value
 
@@ -34,6 +34,3 @@ class BaseEvent(BaseModel):
 
     def __str__(self) -> str:
         return str(self.model_dump_json())
-
-    def toJSON(self) -> dict[str, Any]:
-        return self.model_dump(mode="json")

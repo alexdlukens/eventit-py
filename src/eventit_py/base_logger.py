@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -12,6 +13,8 @@ class BaseEventLogger:
         self.chosen_backend = None
         self.db_client = None
         self.db_config = {}
+        self.builtin_metrics = {"timestamp": datetime.datetime.now}
+
         logger.debug("In BaseEventLogger Constructor")
         if "MONGO_URL" in kwargs:
             try:
