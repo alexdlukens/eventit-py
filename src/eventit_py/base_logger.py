@@ -1,5 +1,4 @@
 import datetime
-import json
 import logging
 from typing import Callable, Union
 
@@ -61,28 +60,11 @@ class BaseEventLogger:
         if self.chosen_backend == "filepath":
             self.db_client.close()
 
-    def _log_metric(self, info):
-        if self.chosen_backend == "mongodb":
-            # log to mongo
-            pass
-        elif self.chosen_backend == "filepath":
-            json.dump(info, self.db_client)
+    def log_event(self, **kwargs):
+        raise NotImplementedError(
+            "log_event() wrapper unimplemented in BaseEventLogger"
+        )
 
-        return
-
-    def track_metrics(self, func):
-        """General wrapper used to track metrics for a specific API route
-
-        Args:
-            func (Callable): Function to be wrapped
-        """
-
-        raise NotImplementedError("track_metrics unimplemented in BaseAuthitPlugin")
-
-        def wrapper():
-            # log X info beforehand
-            self._log_metric({"hello": "world"})
-            func()
-            # log Y info afterward
-
-        return wrapper
+    def event(self, **kwargs):
+        """Wrapper function to be implemented in subclass"""
+        raise NotImplementedError("event() wrapper unimplemented in BaseEventLogger")
