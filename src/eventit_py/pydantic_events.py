@@ -2,7 +2,7 @@ import datetime
 import logging
 from typing import Optional
 
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 DEFAULT_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S %Z"
 
@@ -17,6 +17,7 @@ class BaseEvent(BaseModel):
     user: Optional[str] = None
     group: Optional[str] = None
     function_name: Optional[str] = None
+    description: Optional[str] = Field(strict=True, default=None)
     timestamp: datetime.datetime
 
     @field_validator("timestamp")
@@ -31,7 +32,7 @@ class BaseEvent(BaseModel):
         return timestamp.strftime(DEFAULT_TIMESTAMP_FORMAT)
 
     def __repr__(self) -> str:
-        return f"BaseEvent(timestamp={self.timestamp.strftime(DEFAULT_TIMESTAMP_FORMAT)}, user={self.user}, group={self.group}, route={self.route})"
+        return f"BaseEvent(timestamp={self.timestamp.strftime(DEFAULT_TIMESTAMP_FORMAT)}, description={self.description})"
 
     def __str__(self) -> str:
         return str(self.model_dump_json())
