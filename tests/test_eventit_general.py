@@ -9,8 +9,6 @@ from eventit_py.event_logger import EventLogger
 
 
 def test_event_logger_setup(tmp_path):
-    # from authit_py.flask_plugin import AuthitFlaskExtension
-
     tmp_file = tmp_path / "eventit.log"
     if tmp_file.exists():
         os.remove(tmp_file)
@@ -26,8 +24,6 @@ def test_event_logger_setup(tmp_path):
 
 
 def test_event_logger_single_event(tmp_path):
-    # from authit_py.flask_plugin import AuthitFlaskExtension
-
     tmp_file = tmp_path / "eventit.log"
     if tmp_file.exists():
         os.remove(tmp_file)
@@ -56,8 +52,6 @@ def test_event_logger_single_event(tmp_path):
 
 
 def test_event_function_name(tmp_path):
-    # from authit_py.flask_plugin import AuthitFlaskExtension
-
     tmp_file = tmp_path / "eventit.log"
     if tmp_file.exists():
         os.remove(tmp_file)
@@ -87,8 +81,6 @@ def test_event_function_name(tmp_path):
 
 
 def test_log_separate_event_default(tmp_path):
-    # from authit_py.flask_plugin import AuthitFlaskExtension
-
     tmp_file = tmp_path / "eventit.log"
     if tmp_file.exists():
         os.remove(tmp_file)
