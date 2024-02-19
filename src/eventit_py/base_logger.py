@@ -1,7 +1,7 @@
 import datetime
 import json
 import logging
-from typing import Callable
+from typing import Callable, Union
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +13,11 @@ def _handle_timestamp(*args, **kwargs):
     return datetime.datetime.now()
 
 
-def _return_function_name(func: Callable, *args, **kwargs):
-    return func.__name__
+def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
+    try:
+        return func.__name__
+    except AttributeError:
+        return None
 
 
 class BaseEventLogger:
