@@ -17,7 +17,9 @@ def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
     try:
         return func.__name__
     except AttributeError:
-        return None
+        if func is None:
+            return None
+        return str(func)
 
 
 class BaseEventLogger:

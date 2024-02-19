@@ -84,3 +84,44 @@ def test_event_function_name(tmp_path):
 
     finally:
         os.remove(tmp_file)
+
+
+def test_log_separate_event_default(tmp_path):
+    # from authit_py.flask_plugin import AuthitFlaskExtension
+
+    tmp_file = tmp_path / "eventit.log"
+    if tmp_file.exists():
+        os.remove(tmp_file)
+
+    try:
+        eventit = EventLogger(filepath=str(tmp_file))
+
+        assert eventit.filepath == str(tmp_file)
+        assert tmp_file.exists()
+
+        # log event with specific name
+        eventit.log_event("Banana")
+
+        with open(tmp_file, "r", encoding="utf-8") as f:
+            assert len(lines := f.readlines()) == 1
+            first_line = json.loads(lines[0])
+            assert first_line == {
+                "timestamp": ANY,
+                "function_name": "Banana",
+            }
+
+        # log empty event with just timestamp
+        eventit.log_event()
+
+        with open(tmp_file, "r", encoding="utf-8") as f:
+            assert len(lines := f.readlines()) == 2
+            first_line = json.loads(lines[0])
+            second_line = json.loads(lines[1])
+            assert first_line == {
+                "timestamp": ANY,
+                "function_name": "Banana",
+            }
+            assert second_line == {"timestamp": ANY}
+
+    finally:
+        os.remove(tmp_file)

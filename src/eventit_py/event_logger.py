@@ -56,6 +56,7 @@ class EventLogger(BaseEventLogger):
         # log to chosen db client
         if self.chosen_backend == "filepath":
             json.dump(event.model_dump(mode="json", exclude_none=True), self.db_client)
+            self.db_client.write("\n")
             self.db_client.flush()
         else:
             raise NotImplementedError(
