@@ -18,40 +18,53 @@ class EventLogger(BaseEventLogger):
             func (Callable, optional): _description_. Defaults to None.
 
         Raises:
-            NotImplementedError: _description_
+            NotImplementedError: If retrieve_metric unimplemented for the specified metric
 
         Returns:
-            Any: _description_
+            Any: The computed metric
         """
         if metric in self.builtin_metrics:
             return self.builtin_metrics[metric](func=func)
 
-        raise NotImplementedError("retrieve_metric unimplemented")
+        raise NotImplementedError(f"retrieve_metric unimplemented for metric {metric}")
 
     def log_event(
-        self, func: Callable = None, tracking_details: dict[str, bool] = None
+        self,
+        func: Callable = None,
+        description: str = None,
+        tracking_details: dict[str, bool] = None,
+        event_type: Callable = None,
+        **kwargs,
     ) -> None:
         """Main function used to log information. Inherits builtin metrics from BaseEventLogger
 
         Args:
             func (Callable, optional): Function that produced event we are logging. Defaults to None.
+            description (str, optional): Description to be included with the event being logged
             tracking_details (dict[str, bool], optional): Specific metrics to be tracked. Defaults to tracking all builtin metrics.
-
+            event_type (Callable): Event type (as pydantic model) used for pydantic type validation
         Raises:
             NotImplementedError: If logging backend specified in class constructor is not yet implemented
         """
+        if event_type is None:
+            event_type = BaseEvent
+        if not issubclass(event_type, BaseEvent):
+            raise TypeError(
+                f"provided event type {event_type} is not derived from BaseEvent"
+            )
         inner_tracking_details = tracking_details
         # default to providing all metrics if no specific metrics provided to track
         if tracking_details is None:
             inner_tracking_details = {metric: True for metric in self.builtin_metrics}
         api_event_details = {}
+        api_event_details["description"] = description
         for metric, should_track in inner_tracking_details.items():
             if not should_track:
                 continue
             api_event_details[metric] = self.retrieve_metric(metric=metric, func=func)
 
         # make event from details
-        event = BaseEvent(**api_event_details)
+        event = event_type(**api_event_details)
 
         # log to chosen db client
         if self.chosen_backend == "filepath":
@@ -64,13 +77,20 @@ class EventLogger(BaseEventLogger):
             )
 
     def event(
-        self, func: Callable = None, tracking_details: dict[str, bool] = None
+        self,
+        func: Callable = None,
+        description: str = None,
+        tracking_details: dict[str, bool] = None,
+        event_type: Callable = None,
+        **kwargs,
     ) -> Callable:
         """Wrapper to be placed around functions that want logging functionality before they are called
 
         Args:
             func (Callable, optional): Function to be wrapped
+            description (str, optional): Description to be included with the event being logged
             tracking_details (dict[str, bool], optional): Specific metrics to be tracked. Defaults to tracking all builtin metrics.
+            event_type (Callable): Event type (as pydantic model) used for pydantic type validation
 
         Raises:
             NotImplementedError: If logging backend specified in class constructor is not yet implemented
@@ -79,12 +99,22 @@ class EventLogger(BaseEventLogger):
             Callable: wrapped function
         """
         if func is None:
-            return functools.partial(self.event, tracking_details=tracking_details)
+            return functools.partial(
+                self.event,
+                description=description,
+                tracking_details=tracking_details,
+                event_type=event_type,
+            )
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # defer to log_event function for specific handling
-            self.log_event(func=func, tracking_details=tracking_details)
+            self.log_event(
+                func=func,
+                description=description,
+                tracking_details=tracking_details,
+                event_type=event_type,
+            )
 
             return func(*args, **kwargs)
 
