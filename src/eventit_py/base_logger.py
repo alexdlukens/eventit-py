@@ -2,6 +2,8 @@ import datetime
 import logging
 from typing import Callable, Union
 
+from eventit_py.pydantic_events import BaseEvent
+
 logger = logging.getLogger(__name__)
 
 BACKEND_TYPES = ["mongodb", "filepath"]
@@ -22,7 +24,10 @@ def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
 
 
 class BaseEventLogger:
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, default_event_type: Callable = None, **kwargs) -> None:
+        self._default_event_type = default_event_type
+        if default_event_type is None:
+            self._default_event_type = BaseEvent
         self.chosen_backend = None
         self.db_client = None
         self.db_config = {}

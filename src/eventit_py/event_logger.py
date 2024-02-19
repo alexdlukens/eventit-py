@@ -47,10 +47,10 @@ class EventLogger(BaseEventLogger):
             NotImplementedError: If logging backend specified in class constructor is not yet implemented
         """
         if event_type is None:
-            event_type = BaseEvent
+            event_type = self._default_event_type
         if not issubclass(event_type, BaseEvent):
             raise TypeError(
-                f"provided event type {event_type} is not derived from BaseEvent"
+                f"provided event type {event_type} is not derived from {self._default_event_type}"
             )
         inner_tracking_details = tracking_details
         # default to providing all metrics if no specific metrics provided to track
