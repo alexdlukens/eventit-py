@@ -19,6 +19,11 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: ruff-import
+        name: ruff-import
+        types_or: [ python, pyi, jupyter ]
+        language: system
+        entry: ruff check --select I --fix .
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: v0.1.14
