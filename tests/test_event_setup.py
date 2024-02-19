@@ -49,9 +49,6 @@ def test_event_logger_single_event(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
-                "user": None,
-                "group": None,
-                "function_name": None,
             }
 
     finally:
@@ -82,8 +79,6 @@ def test_event_function_name(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
-                "user": None,
-                "group": None,
                 "function_name": "this_is_a_test",
             }
 
