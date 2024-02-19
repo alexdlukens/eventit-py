@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -8,12 +9,23 @@ BACKEND_TYPES = ["mongodb", "filepath"]
 DEFAULT_LOG_FILEPATH = "eventit.log"
 
 
+def _handle_timestamp(*args, **kwargs):
+    return datetime.datetime.now()
+
+
+def _return_function_name(func: Callable, *args, **kwargs):
+    return func.__name__
+
+
 class BaseEventLogger:
     def __init__(self, **kwargs) -> None:
         self.chosen_backend = None
         self.db_client = None
         self.db_config = {}
-        self.builtin_metrics = {"timestamp": datetime.datetime.now}
+        self.builtin_metrics = {
+            "timestamp": _handle_timestamp,
+            "function_name": _return_function_name,
+        }
 
         logger.debug("In BaseEventLogger Constructor")
         if "MONGO_URL" in kwargs:

@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class EventLogger(BaseEventLogger):
-    def retrieve_metric(self, metric: str) -> Any:
+    def retrieve_metric(self, metric: str, func: Callable = None) -> Any:
         if metric in self.builtin_metrics:
-            return self.builtin_metrics[metric]()
+            return self.builtin_metrics[metric](func=func)
 
         raise NotImplementedError("retrieve_metric unimplemented")
 
@@ -23,16 +23,19 @@ class EventLogger(BaseEventLogger):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             inner_tracking_details = tracking_details
+
+            # default to providing all metrics if no specific metrics provided to track
             if tracking_details is None:
                 inner_tracking_details = {
-                    "route": True,
-                    "timestamp": True,
+                    metric: True for metric in self.builtin_metrics
                 }
             api_event_details = {}
             for metric, should_track in inner_tracking_details.items():
                 if not should_track:
                     continue
-                api_event_details[metric] = self.retrieve_metric(metric=metric)
+                api_event_details[metric] = self.retrieve_metric(
+                    metric=metric, func=func
+                )
 
             # make event from details
             event = BaseEvent(**api_event_details)

@@ -47,7 +47,45 @@ def test_event_logger_single_event(tmp_path):
         with open(tmp_file, "r", encoding="utf-8") as f:
             assert len(lines := f.readlines()) == 1
             first_line = json.loads(lines[0])
-            assert first_line == {"timestamp": ANY, "user": None, "group": None}
+            assert first_line == {
+                "timestamp": ANY,
+                "user": None,
+                "group": None,
+                "function_name": None,
+            }
+
+    finally:
+        os.remove(tmp_file)
+
+
+def test_event_function_name(tmp_path):
+    # from authit_py.flask_plugin import AuthitFlaskExtension
+
+    tmp_file = tmp_path / "eventit.log"
+    if tmp_file.exists():
+        os.remove(tmp_file)
+
+    try:
+        eventit = EventLogger(filepath=str(tmp_file))
+
+        assert eventit.filepath == str(tmp_file)
+        assert tmp_file.exists()
+
+        @eventit.event(tracking_details={"timestamp": True, "function_name": True})
+        def this_is_a_test():
+            return "Hello, World"
+
+        print(this_is_a_test())
+
+        with open(tmp_file, "r", encoding="utf-8") as f:
+            assert len(lines := f.readlines()) == 1
+            first_line = json.loads(lines[0])
+            assert first_line == {
+                "timestamp": ANY,
+                "user": None,
+                "group": None,
+                "function_name": "this_is_a_test",
+            }
 
     finally:
         os.remove(tmp_file)

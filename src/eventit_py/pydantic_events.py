@@ -16,6 +16,7 @@ class BaseEvent(BaseModel):
 
     user: Optional[str] = None
     group: Optional[str] = None
+    function_name: Optional[str] = None
     timestamp: datetime.datetime
 
     @field_validator("timestamp")
