@@ -2,11 +2,11 @@ import datetime
 import logging
 from typing import Callable, Union
 
+from eventit_py.logging_backends import FileLoggingClient, MongoDBLoggingClient
 from eventit_py.pydantic_events import BaseEvent
 
 logger = logging.getLogger(__name__)
 
-BACKEND_TYPES = ["mongodb", "filepath"]
 DEFAULT_LOG_FILEPATH = "eventit.log"
 
 
@@ -38,32 +38,18 @@ class BaseEventLogger:
 
         logger.debug("In BaseEventLogger Constructor")
         if "MONGO_URL" in kwargs:
-            try:
-                from pymongo import MongoClient
-            except ImportError:
-                logger.exception("Failed to import PyMongo, but MONGO_URL specified")
-                raise
-
             self.chosen_backend = "mongodb"
-            self.db_client = MongoClient()
-
-        # raise TypeError(
-        # "Attempting to Instantiate BaseAuthitPlugin directly. Use a specific plugin instead"
-        # )
+            self.db_client = MongoDBLoggingClient()
 
         # at end, default to using filepath if no other log specified
         if not self.chosen_backend or "filepath" in kwargs:
             logger.debug("setting up filepath backend")
             self.chosen_backend = "filepath"
-            self.filepath = kwargs.get("filepath", DEFAULT_LOG_FILEPATH)
-            self.db_client = open(self.filepath, "a", encoding="utf-8")
-            logger.debug("Opened %s file as backend", self.filepath)
+            self.db_client = FileLoggingClient(
+                filepath=kwargs.get("filepath", DEFAULT_LOG_FILEPATH)
+            )
 
         logger.debug("BaseEventLogger configuration complete")
-
-    def __del__(self):
-        if self.chosen_backend == "filepath":
-            self.db_client.close()
 
     def log_event(self, **kwargs):
         raise NotImplementedError(

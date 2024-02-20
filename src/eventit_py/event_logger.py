@@ -1,5 +1,4 @@
 import functools
-import json
 import logging
 from typing import Any, Callable
 
@@ -67,14 +66,8 @@ class EventLogger(BaseEventLogger):
         event = event_type(**api_event_details)
 
         # log to chosen db client
-        if self.chosen_backend == "filepath":
-            json.dump(event.model_dump(mode="json", exclude_none=True), self.db_client)
-            self.db_client.write("\n")
-            self.db_client.flush()
-        else:
-            raise NotImplementedError(
-                f"Chosen backend {self.chosen_backend} unimplemented"
-            )
+        message = event.model_dump_json(exclude_none=True)
+        self.db_client.log_message(message=message)
 
     def event(
         self,

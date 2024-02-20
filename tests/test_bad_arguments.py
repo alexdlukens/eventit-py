@@ -12,9 +12,6 @@ def test_bad_event_type(tmp_path):
 
     eventit = EventLogger(filepath=str(tmp_file))
 
-    assert eventit.filepath == str(tmp_file)
-    assert tmp_file.exists()
-
     # log event with specific name
     try:
         eventit.log_event("Banana", event_type=dict)
@@ -29,9 +26,6 @@ def test_bad_description_type(tmp_path):
         os.remove(tmp_file)
 
     eventit = EventLogger(filepath=str(tmp_file))
-
-    assert eventit.filepath == str(tmp_file)
-    assert tmp_file.exists()
 
     # log event with specific name
     try:

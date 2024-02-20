@@ -16,7 +16,7 @@ def test_event_logger_setup(tmp_path):
     try:
         eventit = EventLogger(filepath=str(tmp_file))
 
-        assert eventit.filepath == str(tmp_file)
+        assert str(eventit.db_client._filepath) == str(tmp_file)
         assert tmp_file.exists()
 
     finally:
@@ -30,9 +30,6 @@ def test_event_logger_single_event(tmp_path):
 
     try:
         eventit = EventLogger(filepath=str(tmp_file))
-
-        assert eventit.filepath == str(tmp_file)
-        assert tmp_file.exists()
 
         @eventit.event(tracking_details={"timestamp": True})
         def this_is_a_test():
@@ -59,9 +56,6 @@ def test_event_function_name(tmp_path):
     try:
         eventit = EventLogger(filepath=str(tmp_file))
 
-        assert eventit.filepath == str(tmp_file)
-        assert tmp_file.exists()
-
         @eventit.event(tracking_details={"timestamp": True, "function_name": True})
         def this_is_a_test():
             return "Hello, World"
@@ -87,9 +81,6 @@ def test_log_separate_event_default(tmp_path):
 
     try:
         eventit = EventLogger(filepath=str(tmp_file))
-
-        assert eventit.filepath == str(tmp_file)
-        assert tmp_file.exists()
 
         # log event with specific name
         eventit.log_event("Banana")
