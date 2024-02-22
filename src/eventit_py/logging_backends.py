@@ -4,6 +4,8 @@ import io
 import logging
 import pathlib
 
+from pydantic import BaseModel
+
 logger = logging.getLogger(__name__)
 
 BACKEND_TYPES = ["mongodb", "filepath"]
@@ -23,7 +25,7 @@ class FileLoggingClient:
             logger.debug("Closing handle to file %s", self._filepath)
             self.file_handle.close()
 
-    def log_message(self, message: str) -> None:
+    def log_message(self, message: BaseModel) -> None:
         """Record the message provided into a single line, on the file opened
         Write newline to put next message on separate line (jsonlines format)
         Force file to be flushed to keep consistency for now
@@ -31,7 +33,7 @@ class FileLoggingClient:
             message (str): message to be logged
         """
         self.file_handle.seek(0, io.SEEK_END)
-        self.file_handle.write(message)
+        self.file_handle.write(message.model_dump_json(exclude_none=True))
         self.file_handle.write("\n")
         self.file_handle.flush()
 
@@ -47,5 +49,5 @@ class MongoDBLoggingClient:
         self.mongo_client = MongoClient(self._mongo_url)
         raise NotImplementedError()
 
-    def log_message(self, message: str) -> None:
+    def log_message(self, message: BaseModel) -> None:
         raise NotImplementedError()

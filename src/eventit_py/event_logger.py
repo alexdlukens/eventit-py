@@ -66,8 +66,7 @@ class EventLogger(BaseEventLogger):
         event = event_type(**api_event_details)
 
         # log to chosen db client
-        message = event.model_dump_json(exclude_none=True)
-        self.db_client.log_message(message=message)
+        self.db_client.log_message(message=event)
 
     def event(
         self,
