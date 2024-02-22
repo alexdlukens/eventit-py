@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import pytest
 from eventit_py.event_logger import EventLogger
@@ -6,11 +7,10 @@ from pydantic import ValidationError
 
 
 def test_bad_event_type(tmp_path):
-    tmp_file = tmp_path / "eventit.log"
-    if tmp_file.exists():
-        os.remove(tmp_file)
+    if tmp_path.exists():
+        shutil.rmtree(tmp_path, ignore_errors=True)
 
-    eventit = EventLogger(filepath=str(tmp_file))
+    eventit = EventLogger(directory=str(tmp_path))
 
     # log event with specific name
     try:
@@ -18,6 +18,8 @@ def test_bad_event_type(tmp_path):
         pytest.fail("log event did not break with invalid event type")
     except TypeError:
         pass  # we expected this to happen
+    finally:
+        shutil.rmtree(tmp_path, ignore_errors=True)
 
 
 def test_bad_description_type(tmp_path):

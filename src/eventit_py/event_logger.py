@@ -33,7 +33,7 @@ class EventLogger(BaseEventLogger):
         description: str = None,
         tracking_details: dict[str, bool] = None,
         event_type: Callable = None,
-        **kwargs,
+        group: str = None,
     ) -> None:
         """Main function used to log information. Inherits builtin metrics from BaseEventLogger
 
@@ -66,7 +66,9 @@ class EventLogger(BaseEventLogger):
         event = event_type(**api_event_details)
 
         # log to chosen db client
-        self.db_client.log_message(message=event)
+        if group is None:
+            group = self._default_event_group
+        self.db_client.log_message(message=event, group=group)
 
     def event(
         self,
@@ -74,7 +76,7 @@ class EventLogger(BaseEventLogger):
         description: str = None,
         tracking_details: dict[str, bool] = None,
         event_type: Callable = None,
-        **kwargs,
+        group=None,
     ) -> Callable:
         """Wrapper to be placed around functions that want logging functionality before they are called
 
@@ -96,6 +98,7 @@ class EventLogger(BaseEventLogger):
                 description=description,
                 tracking_details=tracking_details,
                 event_type=event_type,
+                group=group,
             )
 
         @functools.wraps(func)
@@ -106,6 +109,7 @@ class EventLogger(BaseEventLogger):
                 description=description,
                 tracking_details=tracking_details,
                 event_type=event_type,
+                group=group,
             )
 
             return func(*args, **kwargs)

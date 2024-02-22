@@ -1,5 +1,6 @@
 import datetime
 import logging
+import pathlib
 from typing import Callable, Union
 
 from eventit_py.logging_backends import FileLoggingClient, MongoDBLoggingClient
@@ -31,6 +32,10 @@ class BaseEventLogger:
         self.chosen_backend = None
         self.db_client = None
         self.db_config = {}
+        self.groups: list[str] = kwargs.get("groups", ["default"])
+        self._default_event_group = kwargs.get("default_event_group", "default")
+        self.groups.append(self._default_event_group)
+        self.groups = list(set(self.groups))
         self.builtin_metrics = {
             "timestamp": _handle_timestamp,
             "function_name": _return_function_name,
@@ -42,11 +47,15 @@ class BaseEventLogger:
             self.db_client = MongoDBLoggingClient()
 
         # at end, default to using filepath if no other log specified
-        if not self.chosen_backend or "filepath" in kwargs:
+        if not self.chosen_backend or "directory" in kwargs:
             logger.debug("setting up filepath backend")
             self.chosen_backend = "filepath"
+            directory = pathlib.Path(kwargs.get("directory", "./"))
+            if not directory.exists():
+                directory.mkdir(parents=True)
             self.db_client = FileLoggingClient(
-                filepath=kwargs.get("filepath", DEFAULT_LOG_FILEPATH)
+                directory=kwargs.get("directory", "./"),
+                groups=self.groups,
             )
 
         logger.debug("BaseEventLogger configuration complete")
