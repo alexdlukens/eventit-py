@@ -31,6 +31,7 @@ def test_setup_custom_group(tmp_path):
             directory=tmp_path, groups=["default", "custom1"], separate_files=True
         )
 
+        # need to support dynamic args right now for metric function
         def increment_five(*args, **kwargs):
             global five
             five = five + 1

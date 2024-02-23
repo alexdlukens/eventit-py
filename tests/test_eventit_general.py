@@ -151,6 +151,57 @@ def test_setup_custom_group(tmp_path):
 
 
 def test_setup_custom_group_single_file(tmp_path):
+    """Logging different groups to single file should append to list, not overwriting any other entries"""
+    if tmp_path.exists():
+        shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_file = tmp_path / "eventit.log"
+
+    try:
+        eventit = EventLogger(
+            directory=tmp_path,
+            filename="eventit.log",
+            groups=["default", "custom1"],
+            separate_files=False,
+        )
+
+        @eventit.event(
+            group="custom1",
+            tracking_details={"timestamp": True, "function_name": True, "group": True},
+        )
+        def this_is_a_test():
+            return "Hello, World"
+
+        @eventit.event(
+            group="default",
+            tracking_details={"timestamp": True, "function_name": True, "group": True},
+        )
+        def this_is_a_test2():
+            return "Hello, World2"
+
+        print(this_is_a_test())
+
+        print(this_is_a_test2())
+
+        with open(tmp_file, "r", encoding="utf-8") as f:
+            assert len(lines := f.readlines()) == 2
+            first_line = json.loads(lines[0])
+            assert first_line == {
+                "timestamp": ANY,
+                "function_name": "this_is_a_test",
+                "group": "custom1",
+            }
+            second_line = json.loads(lines[1])
+            assert second_line == {
+                "timestamp": ANY,
+                "function_name": "this_is_a_test2",
+                "group": "default",
+            }
+
+    finally:
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+def test_multiple_groups_single_file(tmp_path):
     """Test basic funcitonality for separate groups.
     I want to be able to toggle whether group is shown in tracking details (default to True),
     log separate "groups" to separate files, and specify which group each event is logged as
