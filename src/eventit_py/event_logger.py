@@ -32,7 +32,16 @@ class EventLogger(BaseEventLogger):
             f"retrieve_metric unimplemented for metric '{metric}'"
         )
 
-    def register_custom_metric(self, metric: str, func: Callable = None):
+    def register_custom_metric(self, metric: str, func: Callable):
+        """Register a user-defined metric on name provided, to be retrieved using provided function
+
+        Args:
+            metric (str): name of new metric
+            func (Callable): function to retrieve specified metric
+
+        Raises:
+            ValueError: If metric specified by name already present in builtin_metrics or custom_metrics
+        """
         if metric in self.builtin_metrics:
             raise ValueError(f"Metric '{metric}' already present in builtin metrics")
         elif metric in self.custom_metrics:

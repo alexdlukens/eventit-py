@@ -26,13 +26,15 @@ class FileLoggingClient:
         logger.debug("Initializing FilepathDBClient")
         self._directory = pathlib.Path(directory).resolve()
         if not self._directory.is_dir():
-            raise Exception(f"Provided path {directory} is not a directory")
+            raise NotADirectoryError(f"Provided path {directory} is not a directory")
         self._groups = groups
 
         self.file_handles: dict[str, TextIO] = {}
         self._filepaths: dict[str, pathlib.Path] = {}
         self._separate_files = separate_files
         self._filename = filename
+
+        # setup logger for single or separate files
         if self._separate_files:
             self._setup_separate_files()
         else:
@@ -99,7 +101,7 @@ class MongoDBLoggingClient:
         self.mongo_client = MongoClient(self._mongo_url)
         raise NotImplementedError()
 
-    def log_message(self, message: BaseModel) -> None:
+    def log_message(self, message: BaseModel, group: str) -> None:
         """Log message into MongoDB. Message will be entered as a single document into configured collectoin
 
         Args:
