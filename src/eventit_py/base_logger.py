@@ -71,11 +71,11 @@ class BaseEventLogger:
 
         logger.debug("BaseEventLogger configuration complete")
 
-    def log_event(self, **kwargs):
+    def log_event(self):
         raise NotImplementedError(
             "log_event() wrapper unimplemented in BaseEventLogger"
         )
 
-    def event(self, **kwargs):
+    def event(self):
         """Wrapper function to be implemented in subclass"""
         raise NotImplementedError("event() wrapper unimplemented in BaseEventLogger")
