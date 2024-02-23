@@ -53,7 +53,11 @@ class BaseEventLogger:
         logger.debug("In BaseEventLogger Constructor")
         if "MONGO_URL" in kwargs:
             self.chosen_backend = "mongodb"
-            self.db_client = MongoDBLoggingClient()
+            mongo_url = kwargs.get("MONGO_URL")
+            database_name = kwargs.get("database_name")
+            self.db_client = MongoDBLoggingClient(
+                mongo_url=mongo_url, database_name=database_name, groups=self.groups
+            )
 
         # at end, default to using filepath if no other log specified
         if not self.chosen_backend or "directory" in kwargs:

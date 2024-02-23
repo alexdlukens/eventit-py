@@ -10,6 +10,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 BACKEND_TYPES = ["mongodb", "filepath"]
+DEFAULT_DATABASE_NAME = "eventit"
 
 
 class FileLoggingClient:
@@ -88,18 +89,41 @@ class MongoDBLoggingClient:
     """Utilize MongoDB as a backend for storing log information"""
 
     def __init__(
-        self, mongo_url: str, database_name: str, collection_name: str
+        self,
+        mongo_url: str,
+        groups: list[str],
+        exclude_none: bool = True,
+        database_name: str = None,
     ) -> None:
+        logger.debug("Initializing MongoDBLoggingClient")
         try:
             from pymongo import MongoClient
+            from pymongo.errors import ServerSelectionTimeoutError
         except ImportError:
-            logger.exception("Failed to import PyMongo, but MONGO_URL specified")
+            logger.exception(
+                "Failed to import from PyMongo in MongoDBLoggingClient constructor"
+            )
             raise
         self._mongo_url = mongo_url
+        self._groups = groups
         self._database_name = database_name
-        self._collection_name = collection_name
-        self.mongo_client = MongoClient(self._mongo_url)
-        raise NotImplementedError()
+        if self._database_name is None:
+            self._database_name = DEFAULT_DATABASE_NAME
+
+        self._mongo_client = MongoClient(self._mongo_url)
+        try:
+            self._mongo_client.list_database_names()
+        except ServerSelectionTimeoutError:
+            print("Failed to connect to MongoDB")
+            raise
+        logger.debug("Initial MongoDB connection successful")
+        self.reset_db()
+        self._db = self._mongo_client[self._database_name]
+        self.exclude_none = exclude_none
+
+    def reset_db(self):
+        logger.debug("About to drop database %s from MongoDB", self._database_name)
+        self._mongo_client.drop_database(self._database_name)
 
     def log_message(self, message: BaseModel, group: str) -> None:
         """Log message into MongoDB. Message will be entered as a single document into configured collectoin
@@ -110,4 +134,8 @@ class MongoDBLoggingClient:
         Raises:
             NotImplementedError: _description_
         """
-        raise NotImplementedError()
+        if group not in self._groups:
+            raise ValueError(f"Invalid group {group} provided")
+        self._db[group].insert_one(
+            message.model_dump(mode="json", exclude_none=self.exclude_none)
+        )

@@ -1,0 +1,50 @@
+import json
+from unittest.mock import ANY
+
+import pytest
+from eventit_py.event_logger import EventLogger
+from eventit_py.logging_backends import MongoDBLoggingClient
+from pymongo import MongoClient
+from pymongo.errors import ServerSelectionTimeoutError
+
+MONGO_URL = "mongodb://root:e6OGc80Oux@127.0.0.1:27017/?authSource=admin"
+EVENTIT_DB_NAME = "eventit"
+mongo_client = MongoClient(MONGO_URL)
+try:
+    mongo_client.list_database_names()
+except ServerSelectionTimeoutError:
+    print("Failed to connect to MongoDB")
+    raise
+
+
+def test_event_logger_setup(tmp_path):
+    try:
+        eventit = EventLogger(MONGO_URL=MONGO_URL, database=EVENTIT_DB_NAME)
+
+        assert isinstance(eventit.db_client, MongoDBLoggingClient)
+
+    except Exception:
+        pytest.fail("failed to initialize MongoDBLoggingClient")
+    # finally:
+    #     mongo_client.drop_database(EVENTIT_DB_NAME)
+
+
+def test_event_logger_setup(tmp_path):
+    try:
+        eventit = EventLogger(MONGO_URL=MONGO_URL, database=EVENTIT_DB_NAME)
+
+        @eventit.event(description="This is a basic test for MongoDB")
+        def this_is_a_mongodb_test():
+            return -1
+
+        this_is_a_mongodb_test()
+        first_record = mongo_client[EVENTIT_DB_NAME]["default"].find_one({}, {"_id": 0})
+
+        assert first_record == {
+            "timestamp": ANY,
+            "group": "default",
+            "description": "This is a basic test for MongoDB",
+            "function_name": "this_is_a_mongodb_test",
+        }
+    finally:
+        mongo_client.drop_database(EVENTIT_DB_NAME)
