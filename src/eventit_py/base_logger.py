@@ -24,6 +24,13 @@ def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
         return str(func)
 
 
+def _return_group(func: Callable, *args, **kwargs) -> Union[str, None]:
+    if "context" in kwargs:
+        context: dict = kwargs["context"]
+        return context.get("group", None)
+    return None
+
+
 class BaseEventLogger:
     def __init__(self, default_event_type: Callable = None, **kwargs) -> None:
         self._default_event_type = default_event_type
@@ -31,15 +38,17 @@ class BaseEventLogger:
             self._default_event_type = BaseEvent
         self.chosen_backend = None
         self.db_client = None
-        self.db_config = {}
         self.groups: list[str] = kwargs.get("groups", ["default"])
         self._default_event_group = kwargs.get("default_event_group", "default")
         self.groups.append(self._default_event_group)
         self.groups = list(set(self.groups))
-        self.builtin_metrics = {
+        self.builtin_metrics: dict[str, Callable] = {
             "timestamp": _handle_timestamp,
             "function_name": _return_function_name,
+            "group": _return_group,
         }
+
+        self.custom_metrics: dict[str, Callable] = {}
 
         logger.debug("In BaseEventLogger Constructor")
         if "MONGO_URL" in kwargs:
@@ -56,6 +65,8 @@ class BaseEventLogger:
             self.db_client = FileLoggingClient(
                 directory=kwargs.get("directory", "./"),
                 groups=self.groups,
+                separate_files=kwargs.get("separate_files", True),
+                filename=kwargs.get("filename"),
             )
 
         logger.debug("BaseEventLogger configuration complete")

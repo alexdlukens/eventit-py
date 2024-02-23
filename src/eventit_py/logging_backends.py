@@ -19,18 +19,30 @@ class FileLoggingClient:
         self,
         directory: str,
         groups: list[str],
+        filename: str = None,
         exclude_none: bool = True,
+        separate_files: bool = True,
     ) -> None:
         logger.debug("Initializing FilepathDBClient")
         self._directory = pathlib.Path(directory).resolve()
         if not self._directory.is_dir():
             raise Exception(f"Provided path {directory} is not a directory")
         self._groups = groups
-        self._filepaths: dict[str, pathlib.Path] = {
-            group: self._directory.joinpath(f"{group}.log") for group in groups
-        }
+
         self.file_handles: dict[str, TextIO] = {}
-        for group in groups:
+        self._filepaths: dict[str, pathlib.Path] = {}
+        self._separate_files = separate_files
+        self._filename = filename
+        if self._separate_files:
+            self._setup_separate_files()
+        else:
+            self._setup_single_file()
+
+        self.exclude_none = exclude_none
+
+    def _setup_separate_files(self):
+        for group in self._groups:
+            self._filepaths[group] = self._directory.joinpath(f"{group}.log")
             self.file_handles[group] = open(
                 self._filepaths[group], "a", encoding="utf-8"
             )
@@ -38,7 +50,12 @@ class FileLoggingClient:
                 "Opened %s file as backend for group %s", self._filepaths[group], group
             )
 
-        self.exclude_none = exclude_none
+    def _setup_single_file(self):
+        single_filepath = self._directory.joinpath(self._filename)
+        single_file_handle = open(single_filepath, "a", encoding="utf-8")
+        for group in self._groups:
+            self._filepaths[group] = single_filepath
+            self.file_handles[group] = single_file_handle
 
     def __del__(self):
         """Cleanup resources on destruction of object"""

@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 class EventLogger(BaseEventLogger):
-    def retrieve_metric(self, metric: str, func: Callable = None) -> Any:
+    def retrieve_metric(
+        self, metric: str, func: Callable = None, context: dict[str, Any] = None
+    ) -> Any:
         """Function where new metric retrieval code should be implemented.
 
         Args:
@@ -23,9 +25,21 @@ class EventLogger(BaseEventLogger):
             Any: The computed metric
         """
         if metric in self.builtin_metrics:
-            return self.builtin_metrics[metric](func=func)
+            return self.builtin_metrics[metric](func=func, context=context)
+        elif metric in self.custom_metrics:
+            return self.custom_metrics[metric](func=func, context=context)
+        raise NotImplementedError(
+            f"retrieve_metric unimplemented for metric '{metric}'"
+        )
 
-        raise NotImplementedError(f"retrieve_metric unimplemented for metric {metric}")
+    def register_custom_metric(self, metric: str, func: Callable = None):
+        if metric in self.builtin_metrics:
+            raise ValueError(f"Metric '{metric}' already present in builtin metrics")
+        elif metric in self.custom_metrics:
+            raise ValueError(
+                f"Metric '{metric}' registered multiple times as custom metric"
+            )
+        self.custom_metrics[metric] = func
 
     def log_event(
         self,
@@ -52,15 +66,21 @@ class EventLogger(BaseEventLogger):
                 f"provided event type {event_type} is not derived from {self._default_event_type}"
             )
         inner_tracking_details = tracking_details
-        # default to providing all metrics if no specific metrics provided to track
+        # default to providing all builtin metrics if no specific metrics provided to track
         if tracking_details is None:
             inner_tracking_details = {metric: True for metric in self.builtin_metrics}
         api_event_details = {}
         api_event_details["description"] = description
+
+        # would add additional fields into context as metrics get more complex
+        tracking_context = {"group": group}
+
         for metric, should_track in inner_tracking_details.items():
             if not should_track:
                 continue
-            api_event_details[metric] = self.retrieve_metric(metric=metric, func=func)
+            api_event_details[metric] = self.retrieve_metric(
+                metric=metric, func=func, context=tracking_context
+            )
 
         # make event from details
         event = event_type(**api_event_details)
