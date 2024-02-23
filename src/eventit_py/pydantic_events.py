@@ -2,7 +2,7 @@ import datetime
 import logging
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import AwareDatetime, BaseModel, Field, field_serializer, field_validator
 
 DEFAULT_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S %Z"
 
@@ -18,14 +18,11 @@ class BaseEvent(BaseModel):
     group: Optional[str] = None
     function_name: Optional[str] = None
     description: Optional[str] = Field(strict=True, default=None)
-    timestamp: datetime.datetime
+    timestamp: AwareDatetime
 
     @field_validator("timestamp")
     def ensure_utc_timezone(cls, value: datetime.datetime):
-        utc_offset = value.utcoffset()
-        if utc_offset is not None:
-            value = value.astimezone(datetime.timezone.utc)
-        return value
+        return value.astimezone(datetime.timezone.utc)
 
     @field_serializer("timestamp")
     def timestamp_serializer(self, timestamp: datetime.datetime, _info):

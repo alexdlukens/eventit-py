@@ -12,7 +12,7 @@ DEFAULT_LOG_FILEPATH = "eventit.log"
 
 
 def _handle_timestamp(*args, **kwargs):
-    return datetime.datetime.now()
+    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
