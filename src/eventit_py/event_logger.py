@@ -70,6 +70,8 @@ class EventLogger(BaseEventLogger):
         """
         if event_type is None:
             event_type = self._default_event_type
+        if group is None:
+            group = self._default_event_group
         if not issubclass(event_type, BaseEvent):
             raise TypeError(
                 f"provided event type {event_type} is not derived from {self._default_event_type}"
@@ -95,8 +97,6 @@ class EventLogger(BaseEventLogger):
         event = event_type(**api_event_details)
 
         # log to chosen db client
-        if group is None:
-            group = self._default_event_group
         self.db_client.log_message(message=event, group=group)
 
     def event(

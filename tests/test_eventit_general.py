@@ -93,6 +93,7 @@ def test_log_separate_event_default(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "group": "default",
                 "function_name": "Banana",
             }
 
@@ -105,9 +106,10 @@ def test_log_separate_event_default(tmp_path):
             second_line = json.loads(lines[1])
             assert first_line == {
                 "timestamp": ANY,
+                "group": "default",
                 "function_name": "Banana",
             }
-            assert second_line == {"timestamp": ANY}
+            assert second_line == {"timestamp": ANY, "group": "default"}
 
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
