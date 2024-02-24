@@ -10,15 +10,16 @@ from pymongo.errors import ServerSelectionTimeoutError
 
 MONGO_URL = "mongodb://root:e6OGc80Oux@127.0.0.1:27017/?authSource=admin"
 EVENTIT_DB_NAME = "eventit"
-mongo_client = MongoClient(MONGO_URL)
-try:
-    mongo_client.list_database_names()
-except ServerSelectionTimeoutError:
-    print("Failed to connect to MongoDB")
-    raise
 
 
+@pytest.mark.mongodb
 def test_event_logger_setup():
+    mongo_client = MongoClient(MONGO_URL)
+    try:
+        mongo_client.list_database_names()
+    except ServerSelectionTimeoutError:
+        print("Failed to connect to MongoDB")
+        raise
     try:
         eventit = EventLogger(MONGO_URL=MONGO_URL, database=EVENTIT_DB_NAME)
 
@@ -30,7 +31,14 @@ def test_event_logger_setup():
     #     mongo_client.drop_database(EVENTIT_DB_NAME)
 
 
+@pytest.mark.mongodb
 def test_event_logger_single_event():
+    mongo_client = MongoClient(MONGO_URL)
+    try:
+        mongo_client.list_database_names()
+    except ServerSelectionTimeoutError:
+        print("Failed to connect to MongoDB")
+        raise
     eventit = EventLogger(MONGO_URL=MONGO_URL, database=EVENTIT_DB_NAME)
 
     @eventit.event(description="This is a basic test for MongoDB")
