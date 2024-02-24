@@ -8,38 +8,34 @@ from eventit_py.pydantic_events import DEFAULT_TIMESTAMP_FORMAT
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
-MONGO_URL = "mongodb://root:e6OGc80Oux@127.0.0.1:27017/?authSource=admin"
+# MONGO_URL = "mongodb://root:e6OGc80Oux@127.0.0.1:27017/?authSource=admin"
 EVENTIT_DB_NAME = "eventit"
 
 
 @pytest.mark.mongodb
-def test_event_logger_setup():
-    mongo_client = MongoClient(MONGO_URL)
+def test_event_logger_setup(get_minikube_mongo_uri):
+    mongo_client = MongoClient(get_minikube_mongo_uri)
     try:
         mongo_client.list_database_names()
     except ServerSelectionTimeoutError:
         print("Failed to connect to MongoDB")
         raise
     try:
-        eventit = EventLogger(MONGO_URL=MONGO_URL, database=EVENTIT_DB_NAME)
+        eventit = EventLogger(
+            MONGO_URL=get_minikube_mongo_uri, database=EVENTIT_DB_NAME
+        )
 
         assert isinstance(eventit.db_client, MongoDBLoggingClient)
 
     except Exception:
         pytest.fail("failed to initialize MongoDBLoggingClient")
-    # finally:
-    #     mongo_client.drop_database(EVENTIT_DB_NAME)
 
 
 @pytest.mark.mongodb
-def test_event_logger_single_event():
-    mongo_client = MongoClient(MONGO_URL)
-    try:
-        mongo_client.list_database_names()
-    except ServerSelectionTimeoutError:
-        print("Failed to connect to MongoDB")
-        raise
-    eventit = EventLogger(MONGO_URL=MONGO_URL, database=EVENTIT_DB_NAME)
+def test_event_logger_single_event(get_minikube_mongo_uri):
+    mongo_client = MongoClient(get_minikube_mongo_uri)
+
+    eventit = EventLogger(MONGO_URL=get_minikube_mongo_uri, database=EVENTIT_DB_NAME)
 
     @eventit.event(description="This is a basic test for MongoDB")
     def this_is_a_mongodb_test():
@@ -64,5 +60,3 @@ def test_event_logger_single_event():
         "description": "This is a basic test for MongoDB",
         "function_name": "this_is_a_mongodb_test",
     }
-    # finally:
-    #     mongo_client.drop_database(EVENTIT_DB_NAME)
