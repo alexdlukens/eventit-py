@@ -4,8 +4,6 @@ from typing import Optional
 
 from pydantic import AwareDatetime, BaseModel, Field, field_validator
 
-DEFAULT_TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S %Z"
-
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +23,7 @@ class BaseEvent(BaseModel):
         return value.astimezone(datetime.timezone.utc)
 
     def __repr__(self) -> str:
-        return f"BaseEvent(timestamp={self.timestamp.strftime(DEFAULT_TIMESTAMP_FORMAT)}, description={self.description})"
+        return f"BaseEvent(timestamp={self.timestamp.isoformat()}, description={self.description})"
 
     def __str__(self) -> str:
         return str(self.model_dump_json())
