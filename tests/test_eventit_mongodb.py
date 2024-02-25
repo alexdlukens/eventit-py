@@ -1,10 +1,10 @@
 import datetime
-from unittest.mock import ANY
+import time
 
 import pytest
+from bson.codec_options import CodecOptions
 from eventit_py.event_logger import EventLogger
 from eventit_py.logging_backends import MongoDBLoggingClient
-from eventit_py.pydantic_events import DEFAULT_TIMESTAMP_FORMAT
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
@@ -13,7 +13,7 @@ EVENTIT_DB_NAME = "eventit"
 
 
 @pytest.mark.mongodb
-def test_event_logger_setup(get_minikube_mongo_uri):
+def test_mongodb_logger_setup(get_minikube_mongo_uri):
     mongo_client = MongoClient(get_minikube_mongo_uri)
     try:
         mongo_client.list_database_names()
@@ -32,7 +32,7 @@ def test_event_logger_setup(get_minikube_mongo_uri):
 
 
 @pytest.mark.mongodb
-def test_event_logger_single_event(get_minikube_mongo_uri):
+def test_mongodb_many_events(get_minikube_mongo_uri):
     mongo_client = MongoClient(get_minikube_mongo_uri)
 
     eventit = EventLogger(MONGO_URL=get_minikube_mongo_uri, database=EVENTIT_DB_NAME)
@@ -41,22 +41,27 @@ def test_event_logger_single_event(get_minikube_mongo_uri):
     def this_is_a_mongodb_test():
         return -1
 
-    timestamp_before = datetime.datetime.now(tz=datetime.timezone.utc)
-    this_is_a_mongodb_test()
-    timestamp_after = datetime.datetime.now(tz=datetime.timezone.utc)
-    first_record = mongo_client[EVENTIT_DB_NAME]["default"].find_one(
-        {
-            "timestamp": {
-                "$gte": timestamp_before.strftime(DEFAULT_TIMESTAMP_FORMAT),
-                "$lte": timestamp_after.strftime(DEFAULT_TIMESTAMP_FORMAT),
-            }
-        },
-        {"_id": 0},
-    )
+    timestamps: list[datetime.datetime] = []
+    timestamps.append(datetime.datetime.now(tz=datetime.timezone.utc))
 
-    assert first_record == {
-        "timestamp": ANY,
-        "group": "default",
-        "description": "This is a basic test for MongoDB",
-        "function_name": "this_is_a_mongodb_test",
-    }
+    # enter 1000 records, keeping track of after timestamps
+    for _ in range(1000):
+        this_is_a_mongodb_test()
+        time.sleep(0.001)
+        timestamps.append(datetime.datetime.now(tz=datetime.timezone.utc))
+
+    for i in range(len(timestamps) - 1):
+        print(f"{i=}")
+        assert (
+            mongo_client[EVENTIT_DB_NAME]["default"]
+            .with_options(CodecOptions(tz_aware=True))
+            .count_documents(
+                {
+                    "timestamp": {
+                        "$gte": timestamps[i],
+                        "$lt": timestamps[i + 1],
+                    }
+                },
+            )
+            == 1
+        )

@@ -97,6 +97,7 @@ class MongoDBLoggingClient:
     ) -> None:
         logger.debug("Initializing MongoDBLoggingClient")
         try:
+            from bson.codec_options import CodecOptions
             from pymongo import MongoClient
             from pymongo.errors import ServerSelectionTimeoutError
         except ImportError:
@@ -118,7 +119,9 @@ class MongoDBLoggingClient:
             raise
         logger.debug("Initial MongoDB connection successful")
         self.reset_db()
-        self._db = self._mongo_client[self._database_name]
+        self._db = self._mongo_client[self._database_name].with_options(
+            CodecOptions(tz_aware=True)
+        )
         self.exclude_none = exclude_none
 
     def reset_db(self):
@@ -136,6 +139,4 @@ class MongoDBLoggingClient:
         """
         if group not in self._groups:
             raise ValueError(f"Invalid group {group} provided")
-        self._db[group].insert_one(
-            message.model_dump(mode="json", exclude_none=self.exclude_none)
-        )
+        self._db[group].insert_one(message.model_dump(exclude_none=self.exclude_none))
