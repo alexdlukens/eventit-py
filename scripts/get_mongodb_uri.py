@@ -1,18 +1,16 @@
 import pathlib
 import subprocess
 
-import pytest
 from pymongo import MongoClient
 
 current_path = pathlib.Path(__file__)
-port_forward_script_path = (
-    current_path.parent.parent.parent / "scripts" / "port_forward_mongodb.sh"
-)
+port_forward_script_path = current_path.parent / "port_forward_mongodb.sh"
 
 
-@pytest.fixture
 def get_minikube_mongo_uri():
-    subprocess.Popen(port_forward_script_path)
+    subprocess.Popen(
+        port_forward_script_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ).communicate()
     # Get the Minikube IP address
     minikube_ip_process = subprocess.Popen(["minikube", "ip"], stdout=subprocess.PIPE)
     minikube_ip, _ = minikube_ip_process.communicate()
@@ -33,3 +31,7 @@ def get_minikube_mongo_uri():
     mc.server_info()
 
     return mongo_uri
+
+
+if __name__ == "__main__":
+    print(get_minikube_mongo_uri())
