@@ -8,8 +8,21 @@ logger = logging.getLogger(__name__)
 
 
 class BaseEvent(BaseModel):
-    """Base class to be used for event tracking. Can be specialized for specific applications
+    """
+    Base class to be used for event tracking. Can be specialized for specific applications
     (Flask, Django, add custom data fields, etc)
+
+    Args:
+        user (Optional[str]): The user associated with the event.
+        group (Optional[str]): The group associated with the event.
+        function_name (Optional[str]): The name of the function associated with the event.
+        description (Optional[str]): The description of the event.
+        timestamp (AwareDatetime): The timestamp of the event in UTC timezone.
+
+    Functions:
+        ensure_utc_timezone(value: datetime.datetime): A field validator method to ensure the timestamp is in UTC timezone.
+        __repr__(): Returns a string representation of the BaseEvent object.
+        __str__(): Returns a string representation of the BaseEvent object using the model_dump_json() method.
     """
 
     user: Optional[str] = None

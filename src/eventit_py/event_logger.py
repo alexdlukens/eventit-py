@@ -58,15 +58,16 @@ class EventLogger(BaseEventLogger):
         event_type: Callable = None,
         group: str = None,
     ) -> None:
-        """Main function used to log information. Inherits builtin metrics from BaseEventLogger
+        """Main function used to log information. Inherits builtin metrics from BaseEventLogger.
 
         Args:
             func (Callable, optional): Function that produced event we are logging. Defaults to None.
-            description (str, optional): Description to be included with the event being logged
+            description (str, optional): Description to be included with the event being logged.
             tracking_details (dict[str, bool], optional): Specific metrics to be tracked. Defaults to tracking all builtin metrics.
-            event_type (Callable): Event type (as pydantic model) used for pydantic type validation
+            event_type (Callable): Event type (as pydantic model) used for pydantic type validation.
+
         Raises:
-            NotImplementedError: If logging backend specified in class constructor is not yet implemented
+            NotImplementedError: If logging backend specified in class constructor is not yet implemented.
 
         This method is used to log information about an event. It takes in various parameters such as the function that produced the event,
         a description of the event, specific metrics to be tracked, the event type, and the event group. If no event type is provided,
@@ -85,7 +86,6 @@ class EventLogger(BaseEventLogger):
         chosen database client using the `log_message` method of the `db_client`.
 
         Note: This method assumes the existence of a `db_client` attribute in the class, which is responsible for logging the event.
-
         """
         if event_type is None:
             event_type = self._default_event_type
@@ -126,11 +126,11 @@ class EventLogger(BaseEventLogger):
         event_type: Callable = None,
         group=None,
     ) -> Callable:
-        """Wrapper to be placed around functions that want logging functionality before they are called
+        """Wrapper to be placed around functions that want logging functionality before they are called.
 
         Args:
-            func (Callable, optional): Function to be wrapped
-            description (str, optional): Description to be included with the event being logged
+            func (Callable, optional): Function to be wrapped.
+            description (str, optional): Description to be included with the event being logged.
             tracking_details (dict[str, bool], optional): Specific metrics to be tracked. Defaults to tracking all builtin metrics.
             event_type (Callable): Event type (as pydantic model) used for pydantic type validation
             group: Group identifier for the event
