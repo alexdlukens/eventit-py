@@ -16,7 +16,9 @@ class BaseEvent(BaseModel):
     group: Optional[str] = None
     function_name: Optional[str] = None
     description: Optional[str] = Field(strict=True, default=None)
-    timestamp: AwareDatetime
+    timestamp: AwareDatetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
 
     @field_validator("timestamp")
     def ensure_utc_timezone(cls, value: datetime.datetime):
