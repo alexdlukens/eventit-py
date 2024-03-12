@@ -13,17 +13,15 @@ EVENTIT_DB_NAME = "eventit"
 
 
 @pytest.mark.mongodb
-def test_mongodb_logger_setup(get_minikube_mongo_uri):
-    mongo_client = MongoClient(get_minikube_mongo_uri)
+def test_mongodb_logger_setup(get_mongo_uri):
+    mongo_client = MongoClient(get_mongo_uri)
     try:
         mongo_client.list_database_names()
     except ServerSelectionTimeoutError:
         print("Failed to connect to MongoDB")
         raise
     try:
-        eventit = EventLogger(
-            MONGO_URL=get_minikube_mongo_uri, database=EVENTIT_DB_NAME
-        )
+        eventit = EventLogger(MONGO_URL=get_mongo_uri, database=EVENTIT_DB_NAME)
 
         assert isinstance(eventit.db_client, MongoDBLoggingClient)
 
@@ -32,10 +30,10 @@ def test_mongodb_logger_setup(get_minikube_mongo_uri):
 
 
 @pytest.mark.mongodb
-def test_mongodb_many_events(get_minikube_mongo_uri):
-    mongo_client = MongoClient(get_minikube_mongo_uri)
+def test_mongodb_many_events(get_mongo_uri):
+    mongo_client = MongoClient(get_mongo_uri)
 
-    eventit = EventLogger(MONGO_URL=get_minikube_mongo_uri, database=EVENTIT_DB_NAME)
+    eventit = EventLogger(MONGO_URL=get_mongo_uri, database=EVENTIT_DB_NAME)
 
     @eventit.event(description="This is a basic test for MongoDB")
     def this_is_a_mongodb_test():

@@ -173,10 +173,10 @@ def test_file_logging_client_search_events_by_timestamp(tmp_path):
     assert len(events) == 20
 
 
-def test_mongodb_logging_client_search_events_by_timestamp(get_minikube_mongo_uri):
+def test_mongodb_logging_client_search_events_by_timestamp(get_mongo_uri):
     groups = ["group1", "group2"]
     client = MongoDBLoggingClient(
-        mongo_url=get_minikube_mongo_uri,
+        mongo_url=get_mongo_uri,
         groups=groups,
         exclude_none=True,
         database_name="eventit",
