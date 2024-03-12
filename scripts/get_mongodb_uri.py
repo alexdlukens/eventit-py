@@ -16,13 +16,12 @@ def get_minikube_mongo_uri():
     minikube_ip, _ = minikube_ip_process.communicate()
     minikube_ip = minikube_ip.decode().strip()
 
-    password = subprocess.Popen(
+    password = subprocess.run(
         'kubectl get secret mongodly-mongodb -o jsonpath="{.data.mongodb-root-password}" | base64 -d',
         shell=True,
-        stdout=subprocess.PIPE,
-    )
-    password, _ = password.communicate()
-    password = password.decode("utf-8")
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
 
     mongo_uri = f"mongodb://root:{password}@127.0.0.1:27017/?authSource=admin"
 

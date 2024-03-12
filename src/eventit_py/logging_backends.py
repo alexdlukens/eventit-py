@@ -13,7 +13,36 @@ BACKEND_TYPES = ["mongodb", "filepath"]
 DEFAULT_DATABASE_NAME = "eventit"
 
 
-class FileLoggingClient:
+class BaseLoggingClient:
+    """
+    Base class for logging clients.
+
+    Args:
+        groups (list[str]): A list of groups that the logging client belongs to.
+        exclude_none (bool, optional): Whether to exclude None values when logging. Defaults to True.
+    """
+
+    def __init__(self, groups: list[str], exclude_none: bool = True) -> None:
+        self._groups = groups
+        self.exclude_none = exclude_none
+
+    def log_message(self, message: BaseModel, group: str) -> None:
+        """
+        Logs a message to the specified group.
+
+        Args:
+            message (BaseModel): The message to be logged.
+            group (str): The group to log the message to.
+
+        Raises:
+            NotImplementedError: This method must be implemented in derived classes.
+        """
+        raise NotImplementedError(
+            "log_message method must be implemented in derived classes"
+        )
+
+
+class FileLoggingClient(BaseLoggingClient):
     """Append to files from provided filepath for logging"""
 
     def __init__(
@@ -24,11 +53,11 @@ class FileLoggingClient:
         exclude_none: bool = True,
         separate_files: bool = True,
     ) -> None:
+        super().__init__(groups, exclude_none)
         logger.debug("Initializing FilepathDBClient")
         self._directory = pathlib.Path(directory).resolve()
         if not self._directory.is_dir():
             raise NotADirectoryError(f"Provided path {directory} is not a directory")
-        self._groups = groups
 
         self.file_handles: dict[str, TextIO] = {}
         self._filepaths: dict[str, pathlib.Path] = {}
@@ -40,8 +69,6 @@ class FileLoggingClient:
             self._setup_separate_files()
         else:
             self._setup_single_file()
-
-        self.exclude_none = exclude_none
 
     def _setup_separate_files(self):
         for group in self._groups:
@@ -85,7 +112,7 @@ class FileLoggingClient:
         self.file_handles[group].flush()
 
 
-class MongoDBLoggingClient:
+class MongoDBLoggingClient(BaseLoggingClient):
     """Utilize MongoDB as a backend for storing log information"""
 
     def __init__(
@@ -95,6 +122,7 @@ class MongoDBLoggingClient:
         exclude_none: bool = True,
         database_name: str = None,
     ) -> None:
+        super().__init__(groups, exclude_none)
         logger.debug("Initializing MongoDBLoggingClient")
         try:
             from bson.codec_options import CodecOptions
@@ -106,7 +134,6 @@ class MongoDBLoggingClient:
             )
             raise
         self._mongo_url = mongo_url
-        self._groups = groups
         self._database_name = database_name
         if self._database_name is None:
             self._database_name = DEFAULT_DATABASE_NAME
@@ -122,7 +149,6 @@ class MongoDBLoggingClient:
         self._db = self._mongo_client[self._database_name].with_options(
             CodecOptions(tz_aware=True)
         )
-        self.exclude_none = exclude_none
 
     def reset_db(self):
         logger.debug("About to drop database %s from MongoDB", self._database_name)
