@@ -19,18 +19,35 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Setup Poetry
-      uses: Gr1N/setup-poetry@v8
-    - name: Poetry dev dependencies install
-      run: |
-        poetry install --with dev
-    - name: Test with pytest
-      run: |
-        poetry run pytest tests/ -x -vv --junitxml=junit/test-results.xml
+      - name: Calculate port
+        id: calc
+        run: |
+          PYTHON_VER_INT=$(echo "${{ matrix.python-version }}" | tr -d '.')
+          PORT=$((27000 + PYTHON_VER_INT))
+          echo "port=$PORT" >> $GITHUB_OUTPUT
+
+      - name: Setup MongoDB service
+        uses: alexdlukens/mongodb-github-action@fa13afeb0a920f19491292b6819a6129c09fb42b
+        with:
+          mongodb-version: 4.4
+          mongodb-username: root
+          mongodb-password: secret
+          mongodb-port: ${{ steps.calc.outputs.port }}
+          container-name: mongodb-${{ matrix.python-version }}
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Setup Poetry
+        uses: Gr1N/setup-poetry@v8
+      - name: Poetry dev dependencies install
+        run: |
+          poetry install --with dev
+      - name: Test with pytest
+        run: |
+          poetry run pytest tests/ -x -vv --junitxml=junit/test-results.xml
+        env:
+          MONGODB_URI: mongodb://root:secret@localhost:${{ steps.calc.outputs.port }}

@@ -5,9 +5,6 @@ from unittest.mock import ANY
 
 from eventit_py.event_logger import EventLogger
 
-# cur_path = pathlib.Path(__file__)
-# sys.path.insert(0, cur_path.parent.parent)
-
 
 def test_event_logger_setup(tmp_path):
     tmp_file = tmp_path / "default.log"
@@ -38,7 +35,7 @@ def test_event_logger_single_event(tmp_path):
         def this_is_a_test():
             return "Hello, World"
 
-        print(this_is_a_test())
+        assert this_is_a_test() == "Hello, World"
 
         with open(tmp_file, "r", encoding="utf-8") as f:
             assert len(lines := f.readlines()) == 1
@@ -63,7 +60,7 @@ def test_event_function_name(tmp_path):
         def this_is_a_test():
             return "Hello, World"
 
-        print(this_is_a_test())
+        assert this_is_a_test() == "Hello, World"
 
         with open(tmp_file, "r", encoding="utf-8") as f:
             assert len(lines := f.readlines()) == 1
@@ -116,10 +113,6 @@ def test_log_separate_event_default(tmp_path):
 
 
 def test_setup_custom_group(tmp_path):
-    """Test basic funcitonality for separate groups.
-    I want to be able to toggle whether group is shown in tracking details (default to True),
-    log separate "groups" to separate files, and specify which group each event is logged as
-    in the event decorator"""
     if tmp_path.exists():
         shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_file = tmp_path / "custom1.log"
@@ -138,7 +131,7 @@ def test_setup_custom_group(tmp_path):
         def this_is_a_test():
             return "Hello, World"
 
-        print(this_is_a_test())
+        assert this_is_a_test() == "Hello, World"
 
         with open(tmp_file, "r", encoding="utf-8") as f:
             assert len(lines := f.readlines()) == 1
@@ -153,7 +146,6 @@ def test_setup_custom_group(tmp_path):
 
 
 def test_setup_custom_group_single_file(tmp_path):
-    """Logging different groups to single file should append to list, not overwriting any other entries"""
     if tmp_path.exists():
         shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_file = tmp_path / "eventit.log"
@@ -180,9 +172,8 @@ def test_setup_custom_group_single_file(tmp_path):
         def this_is_a_test2():
             return "Hello, World2"
 
-        print(this_is_a_test())
-
-        print(this_is_a_test2())
+        assert this_is_a_test() == "Hello, World"
+        assert this_is_a_test2() == "Hello, World2"
 
         with open(tmp_file, "r", encoding="utf-8") as f:
             assert len(lines := f.readlines()) == 2
@@ -204,10 +195,6 @@ def test_setup_custom_group_single_file(tmp_path):
 
 
 def test_multiple_groups_single_file(tmp_path):
-    """Test basic funcitonality for separate groups.
-    I want to be able to toggle whether group is shown in tracking details (default to True),
-    log separate "groups" to separate files, and specify which group each event is logged as
-    in the event decorator"""
     if tmp_path.exists():
         shutil.rmtree(tmp_path, ignore_errors=True)
     tmp_file = tmp_path / "eventit.log"
@@ -227,7 +214,7 @@ def test_multiple_groups_single_file(tmp_path):
         def this_is_a_test():
             return "Hello, World"
 
-        print(this_is_a_test())
+        assert this_is_a_test() == "Hello, World"
 
         with open(tmp_file, "r", encoding="utf-8") as f:
             assert len(lines := f.readlines()) == 1

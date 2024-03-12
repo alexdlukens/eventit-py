@@ -12,10 +12,32 @@ DEFAULT_LOG_FILEPATH = "eventit.log"
 
 
 def _handle_timestamp(*args, **kwargs):
-    return datetime.datetime.now()
+    """
+    Returns the current timestamp in UTC timezone.
+
+    Args:
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+
+    Returns:
+        datetime.datetime: The current timestamp in UTC timezone.
+    """
+    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
+    """
+    Returns the name of the given function.
+
+    Args:
+        func (Callable): The function to get the name of.
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+
+    Returns:
+        Union[str, None]: The name of the function as a string, or None if the function is None.
+
+    """
     try:
         return func.__name__
     except AttributeError:
@@ -25,6 +47,17 @@ def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
 
 
 def _return_group(func: Callable, *args, **kwargs) -> Union[str, None]:
+    """
+    Returns the 'group' value from the 'context' dictionary if it exists, otherwise returns None.
+
+    Args:
+        func (Callable): The function to be called.
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+
+    Returns:
+        Union[str, None]: The 'group' value from the 'context' dictionary if it exists, otherwise None.
+    """
     if "context" in kwargs:
         context: dict = kwargs["context"]
         return context.get("group", None)
@@ -32,6 +65,27 @@ def _return_group(func: Callable, *args, **kwargs) -> Union[str, None]:
 
 
 class BaseEventLogger:
+    """
+    Base class for event logging.
+
+    This class provides a base implementation for event logging and serves as a template for subclasses to implement
+    specific logging functionality.
+
+    Args:
+        default_event_type (Callable, optional): The default event type to be used if not provided. Defaults to None.
+        ``**kwargs``: Additional keyword arguments for configuring the logger.
+
+    Attributes:
+        _default_event_type (Callable): The default event type.
+        chosen_backend (str): The chosen backend for logging.
+        db_client: The database client for logging.
+        groups (list[str]): The list of event groups.
+        _default_event_group (str): The default event group.
+        builtin_metrics (dict[str, Callable]): The dictionary of built-in metrics.
+        custom_metrics (dict[str, Callable]): The dictionary of custom metrics.
+
+    """
+
     def __init__(self, default_event_type: Callable = None, **kwargs) -> None:
         self._default_event_type = default_event_type
         if default_event_type is None:
@@ -53,7 +107,11 @@ class BaseEventLogger:
         logger.debug("In BaseEventLogger Constructor")
         if "MONGO_URL" in kwargs:
             self.chosen_backend = "mongodb"
-            self.db_client = MongoDBLoggingClient()
+            mongo_url = kwargs.get("MONGO_URL")
+            database_name = kwargs.get("database_name")
+            self.db_client = MongoDBLoggingClient(
+                mongo_url=mongo_url, database_name=database_name, groups=self.groups
+            )
 
         # at end, default to using filepath if no other log specified
         if not self.chosen_backend or "directory" in kwargs:
