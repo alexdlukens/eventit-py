@@ -193,6 +193,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
         __init__: Initializes the MongoDBLoggingClient instance.
         reset_db: Resets the database by dropping the current database from MongoDB.
         log_message: Logs a message into MongoDB.
+        search_events_by_timestamp: Search events within a specified time range for a specific group and event type.
 
     """
 
@@ -266,3 +267,31 @@ class MongoDBLoggingClient(BaseLoggingClient):
         if group not in self._groups:
             raise ValueError(f"Invalid group {group} provided")
         self._db[group].insert_one(message.model_dump(exclude_none=self.exclude_none))
+
+    def search_events_by_timestamp(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        group: str,
+        event_type: BaseEvent,
+        limit: int = None,
+    ) -> List[BaseEvent]:
+        """
+        Search events within a specified time range for a specific group and event type.
+
+        Args:
+            start_time (datetime): The start time of the search range.
+            end_time (datetime): The end time of the search range.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+            limit (int, optional): The maximum number of events to return. Defaults to None.
+
+        Returns:
+            List[BaseEvent]: A sorted list of events that fall within the specified time range for the specified group and event type.
+        """
+        if group not in self._groups:
+            raise ValueError(f"Invalid group {group} provided")
+        query = {"timestamp": {"$gte": start_time, "$lte": end_time}}
+        events = self._db[group].find(query).limit(limit)
+        events = [event_type.model_validate(event) for event in events]
+        return sorted(events, key=lambda x: x.timestamp)
