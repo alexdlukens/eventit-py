@@ -159,20 +159,21 @@ class FileLoggingClient(BaseLoggingClient):
             limit (int, optional): The maximum number of events to return. Defaults to None.
 
         Returns:
-            List[BaseEvent]: A list of events that fall within the specified time range for the specified group and event type.
+            List[BaseEvent]: A sorted list of events that fall within the specified time range for the specified group and event type.
         """
 
         if group not in self._groups:
             raise ValueError(f"Invalid group {group} provided")
         events = []
+        # use new file handle to search whole file
         with open(self._filepaths[group], "r", encoding="utf-8") as file_handle:
             for line in file_handle:
                 event = event_type.model_validate_json(line)
                 if start_time <= event.timestamp <= end_time:
                     events.append(event)
-                    if limit is not None and len(events) >= limit:
+                    if (limit is not None) and (len(events) >= limit):
                         break
-        return events
+        return sorted(events, key=lambda x: x.timestamp)
 
 
 class MongoDBLoggingClient(BaseLoggingClient):

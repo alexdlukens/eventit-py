@@ -1,6 +1,6 @@
 import io
 import pathlib
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -123,13 +123,46 @@ def test_file_logging_client_search_events_by_timestamp(tmp_path):
         groups=groups,
         exclude_none=True,
     )
-    start_time = datetime(2022, 1, 1)
-    end_time = datetime(2022, 1, 2)
+    start_time = datetime(2022, 1, 1).astimezone(timezone.utc)
+    end_time = datetime(2022, 1, 2).astimezone(timezone.utc)
     group = "group1"
-    event_type = MagicMock()
+    event_type = BaseEvent
     limit = 10
+    events = client.search_events_by_timestamp(
+        start_time, end_time, group, event_type, limit
+    )
+
+    assert len(events) == 0
+
+    # log 10 blank events
+    for _ in range(20):
+        # Set end time to current time on the 5th iteration
+        if _ == 4:
+            end_time = datetime.now(tz=timezone.utc)
+        message = BaseEvent()
+        client.log_message(message, group)
+
     events = client.search_events_by_timestamp(
         start_time, end_time, group, event_type, limit
     )
     assert isinstance(events, list)
     assert all(isinstance(event, event_type) for event in events)
+    assert len(events) == 4
+
+    # ensure 10 logged events are now found by search (due to limit)
+    end_time = datetime.now(tz=timezone.utc)
+    events = client.search_events_by_timestamp(
+        start_time, end_time, group, event_type, limit
+    )
+    assert isinstance(events, list)
+    assert all(isinstance(event, event_type) for event in events)
+    assert len(events) == 10
+
+    # ensure all events are found with adequate limit for search
+    end_time = datetime.now(tz=timezone.utc)
+    events = client.search_events_by_timestamp(
+        start_time, end_time, group, event_type, 20
+    )
+    assert isinstance(events, list)
+    assert all(isinstance(event, event_type) for event in events)
+    assert len(events) == 20
