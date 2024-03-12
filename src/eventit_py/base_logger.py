@@ -73,7 +73,7 @@ class BaseEventLogger:
 
     Args:
         default_event_type (Callable, optional): The default event type to be used if not provided. Defaults to None.
-        **kwargs: Additional keyword arguments for configuring the logger.
+        ``**kwargs``: Additional keyword arguments for configuring the logger.
 
     Attributes:
         _default_event_type (Callable): The default event type.
