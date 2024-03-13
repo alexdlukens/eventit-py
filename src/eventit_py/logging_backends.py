@@ -67,6 +67,29 @@ class BaseLoggingClient:
             "search_events_by_timestamp method must be implemented in derived classes"
         )
 
+    def search_events_by_query(
+        self,
+        query_dict: dict,
+        group: str,
+        event_type: BaseEvent,
+        limit: int = None,
+    ) -> List[BaseEvent]:
+        """
+        Search events based on a query dictionary for a specific group and event type.
+
+        Args:
+            query_dict (dict): A dictionary where the key is the field to match and the value is the value to match.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+            limit (int, optional): The maximum number of events to return. Defaults to None.
+
+        Returns:
+            List[BaseModel]: A list of events that match the query for the specified group and event type.
+        """
+        raise NotImplementedError(
+            "search_events_by_query method must be implemented in derived classes"
+        )
+
 
 class FileLoggingClient(BaseLoggingClient):
     """Append to files from provided filepath for logging"""
@@ -173,6 +196,49 @@ class FileLoggingClient(BaseLoggingClient):
                     events.append(event)
                     if (limit is not None) and (len(events) >= limit):
                         break
+        return sorted(events, key=lambda x: x.timestamp)
+
+    def search_events_by_query(
+        self, query_dict: dict, group: str, event_type: BaseEvent, limit: int = None
+    ):
+        """
+        Search events based on a query dictionary for a specific group and event type.
+
+        Args:
+            query_dict (dict): A dictionary where the key is the field to match and the value is the value to match.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+            limit (int, optional): The maximum number of events to return. Defaults to None.
+
+        Returns:
+            List[BaseModel]: A list of events that match the query for the specified group and event type.
+        """
+        # if no limit, then we should set it to none for FileLoggingClient only
+        if limit == 0:
+            limit = None
+
+        if group not in self._groups:
+            raise ValueError(f"Invalid group {group} provided")
+        # ensure all fields in query dict are in event_type class
+        for key in query_dict.keys():
+            if key not in event_type.model_fields:
+                raise ValueError(f"Invalid key {key} in query_dict")
+
+        events: List[BaseEvent] = []
+        with open(self._filepaths[group], "r", encoding="utf-8") as file_handle:
+            for line in file_handle:
+                event = event_type.model_validate_json(line)
+                try:
+                    if all(
+                        getattr(event, key) == value
+                        for key, value in query_dict.items()
+                    ):
+                        events.append(event)
+                        if limit is not None and len(events) >= limit:
+                            return events
+                except AttributeError:
+                    logger.exception("Failed to match query_dict to event")
+                    continue
         return sorted(events, key=lambda x: x.timestamp)
 
 
@@ -292,6 +358,33 @@ class MongoDBLoggingClient(BaseLoggingClient):
         if group not in self._groups:
             raise ValueError(f"Invalid group {group} provided")
         query = {"timestamp": {"$gte": start_time, "$lte": end_time}}
-        events = self._db[group].find(query).limit(limit)
+        events = self._db[group].find(query).limit(limit if limit else 0)
         events = [event_type.model_validate(event) for event in events]
+        return sorted(events, key=lambda x: x.timestamp)
+
+    def search_events_by_query(
+        self, query_dict: dict, group: str, event_type: BaseEvent, limit: int = None
+    ):
+        """
+        Search events based on a query dictionary for a specific group and event type.
+
+        Args:
+            query_dict (dict): A dictionary where the key is the field to match and the value is the value to match.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+            limit (int, optional): The maximum number of events to return. Defaults to None.
+
+        Returns:
+            List[BaseModel]: A list of events that match the query for the specified group and event type.
+        """
+        if group not in self._groups:
+            raise ValueError(f"Invalid group {group} provided")
+
+        # ensure all fields in query dict are in event_type class
+        for key in query_dict.keys():
+            if key not in event_type.model_fields:
+                raise ValueError(f"Invalid key {key} in query_dict")
+
+        cursor = self._db[group].find(query_dict).limit(limit if limit else 0)
+        events: List[BaseEvent] = [event_type(**doc) for doc in cursor]
         return sorted(events, key=lambda x: x.timestamp)

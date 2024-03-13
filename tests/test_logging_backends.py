@@ -227,3 +227,15 @@ def test_mongodb_logging_client_search_events_by_timestamp(get_mongo_uri):
     assert isinstance(events, list)
     assert all(isinstance(event, event_type) for event in events)
     assert len(events) == 20
+
+
+def test_base_logging_client_search_events_by_query(tmp_path):
+    groups = ["group1", "group2"]
+    client = BaseLoggingClient(groups=groups, exclude_none=True)
+    query_dict = {"field1": "value1", "field2": "value2"}
+    group = "group1"
+    event_type = BaseEvent
+    limit = 10
+
+    with pytest.raises(NotImplementedError):
+        client.search_events_by_query(query_dict, group, event_type, limit)
