@@ -1,3 +1,9 @@
+<img src="https://github.com/alexdlukens/eventit-py/blob/master/docs/source/_static/logos/EventIT_Logo_Email_Signature.png" height="100">
+
+[![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Actions status](https://github.com/astral-sh/ruff/workflows/CI/badge.svg)](https://github.com/alexdlukens/eventit-py/actions)
+
 # EventIT Library for Python
 
 This repo is intended to be the core event tracking framework that will be built-upon in other applications (e.g. Authentication event tracking, logs, etc.)
