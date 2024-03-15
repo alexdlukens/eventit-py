@@ -3,11 +3,10 @@ Welcome to Eventit-py's documentation!
 ======================================
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
    :caption: Contents:
 
-   modules
-
+   eventit_py
 
 
 Indices and tables
