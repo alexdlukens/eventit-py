@@ -34,15 +34,15 @@ jobs:
           mongodb-password: secret
           mongodb-port: ${{ steps.calc.outputs.port }}
           container-name: mongodb-${{ matrix.python-version }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Setup Poetry
-        uses: Gr1N/setup-poetry@v8
+        uses: Gr1N/setup-poetry@v9
       - name: Poetry dev dependencies install
         run: |
           poetry install --with dev
