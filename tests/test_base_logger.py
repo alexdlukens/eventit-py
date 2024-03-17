@@ -1,229 +1,80 @@
-import json
-import os
-import shutil
-from unittest.mock import ANY
-
-from eventit_py.event_logger import EventLogger
+import pytest
+from eventit_py.base_logger import BaseEventLogger
+from eventit_py.pydantic_events import BaseEvent
 
 
-def test_event_logger_setup(tmp_path):
-    tmp_file = tmp_path / "default.log"
-    if tmp_path.exists():
-        shutil.rmtree(tmp_path, ignore_errors=True)
-
-    try:
-        eventit = EventLogger(directory=str(tmp_path))
-
-        assert eventit.db_client._filepaths == {
-            "default": (tmp_path / "default.log").resolve()
-        }
-        assert tmp_file.exists()
-
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+class MyEvent2(BaseEvent):
+    special_field: str
 
 
-def test_event_logger_single_event(tmp_path):
-    tmp_file = tmp_path / "default.log"
-    if tmp_path.exists():
-        shutil.rmtree(tmp_path, ignore_errors=True)
-
-    try:
-        eventit = EventLogger(directory=str(tmp_path))
-
-        @eventit.event(tracking_details={"timestamp": True})
-        def this_is_a_test():
-            return "Hello, World"
-
-        assert this_is_a_test() == "Hello, World"
-
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            assert len(lines := f.readlines()) == 1
-            first_line = json.loads(lines[0])
-            assert first_line == {
-                "timestamp": ANY,
-            }
-
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+def test_init_default_event_type():
+    default_event_type = MyEvent2
+    logger = BaseEventLogger(default_event_type=default_event_type)
+    assert logger._default_event_type == default_event_type
 
 
-def test_event_function_name(tmp_path):
-    tmp_file = tmp_path / "default.log"
-    if tmp_path.exists():
-        shutil.rmtree(tmp_path, ignore_errors=True)
-
-    try:
-        eventit = EventLogger(directory=tmp_path)
-
-        @eventit.event(tracking_details={"timestamp": True, "function_name": True})
-        def this_is_a_test():
-            return "Hello, World"
-
-        assert this_is_a_test() == "Hello, World"
-
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            assert len(lines := f.readlines()) == 1
-            first_line = json.loads(lines[0])
-            assert first_line == {
-                "timestamp": ANY,
-                "function_name": "this_is_a_test",
-            }
-
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+def test_init_default_event_type_none():
+    logger = BaseEventLogger()
+    assert logger._default_event_type == BaseEvent
 
 
-def test_log_separate_event_default(tmp_path):
-    tmp_file = tmp_path / "default.log"
-    if tmp_path.exists():
-        shutil.rmtree(tmp_path, ignore_errors=True)
-
-    try:
-        eventit = EventLogger(filepath=str(tmp_file), directory=tmp_path)
-
-        # log event with specific name
-        eventit.log_event("Banana")
-
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            assert len(lines := f.readlines()) == 1
-            first_line = json.loads(lines[0])
-            assert first_line == {
-                "timestamp": ANY,
-                "group": "default",
-                "function_name": "Banana",
-            }
-
-        # log empty event with just timestamp
-        eventit.log_event()
-
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            assert len(lines := f.readlines()) == 2
-            first_line = json.loads(lines[0])
-            second_line = json.loads(lines[1])
-            assert first_line == {
-                "timestamp": ANY,
-                "group": "default",
-                "function_name": "Banana",
-            }
-            assert second_line == {"timestamp": ANY, "group": "default"}
-
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+def test_init_default_event_group():
+    default_event_group = "default_group"
+    logger = BaseEventLogger(default_event_group=default_event_group)
+    assert logger._default_event_group == default_event_group
 
 
-def test_setup_custom_group(tmp_path):
-    if tmp_path.exists():
-        shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_file = tmp_path / "custom1.log"
-    if tmp_file.exists():
-        os.remove(tmp_file)
-
-    try:
-        eventit = EventLogger(
-            directory=tmp_path, groups=["default", "custom1"], separate_files=True
-        )
-
-        @eventit.event(
-            group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": False},
-        )
-        def this_is_a_test():
-            return "Hello, World"
-
-        assert this_is_a_test() == "Hello, World"
-
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            assert len(lines := f.readlines()) == 1
-            first_line = json.loads(lines[0])
-            assert first_line == {
-                "timestamp": ANY,
-                "function_name": "this_is_a_test",
-            }
-
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+def test_init_default_event_group_none():
+    logger = BaseEventLogger()
+    assert logger._default_event_group == "default"
 
 
-def test_setup_custom_group_single_file(tmp_path):
-    if tmp_path.exists():
-        shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_file = tmp_path / "eventit.log"
-
-    try:
-        eventit = EventLogger(
-            directory=tmp_path,
-            filename="eventit.log",
-            groups=["default", "custom1"],
-            separate_files=False,
-        )
-
-        @eventit.event(
-            group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
-        )
-        def this_is_a_test():
-            return "Hello, World"
-
-        @eventit.event(
-            group="default",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
-        )
-        def this_is_a_test2():
-            return "Hello, World2"
-
-        assert this_is_a_test() == "Hello, World"
-        assert this_is_a_test2() == "Hello, World2"
-
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            assert len(lines := f.readlines()) == 2
-            first_line = json.loads(lines[0])
-            assert first_line == {
-                "timestamp": ANY,
-                "function_name": "this_is_a_test",
-                "group": "custom1",
-            }
-            second_line = json.loads(lines[1])
-            assert second_line == {
-                "timestamp": ANY,
-                "function_name": "this_is_a_test2",
-                "group": "default",
-            }
-
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+def test_init_groups():
+    groups = ["group1", "group2"]
+    logger = BaseEventLogger(groups=groups)
+    assert sorted(logger.groups) == sorted(groups)
 
 
-def test_multiple_groups_single_file(tmp_path):
-    if tmp_path.exists():
-        shutil.rmtree(tmp_path, ignore_errors=True)
-    tmp_file = tmp_path / "eventit.log"
+def test_init_groups_empty():
+    logger = BaseEventLogger()
+    assert logger.groups == ["default"]
 
-    try:
-        eventit = EventLogger(
-            directory=tmp_path,
-            filename="eventit.log",
-            groups=["default", "custom1"],
-            separate_files=False,
-        )
 
-        @eventit.event(
-            group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
-        )
-        def this_is_a_test():
-            return "Hello, World"
+def test_init_builtin_metrics():
+    logger = BaseEventLogger()
+    assert sorted(logger.builtin_metrics.keys()) == [
+        "event_location",
+        "function_name",
+        "group",
+        "timestamp",
+    ]
 
-        assert this_is_a_test() == "Hello, World"
 
-        with open(tmp_file, "r", encoding="utf-8") as f:
-            assert len(lines := f.readlines()) == 1
-            first_line = json.loads(lines[0])
-            assert first_line == {
-                "timestamp": ANY,
-                "function_name": "this_is_a_test",
-                "group": "custom1",
-            }
+def test_init_custom_metrics():
+    def metric1_func(*args, **kwargs):
+        return -1
 
-    finally:
-        shutil.rmtree(tmp_path, ignore_errors=True)
+    # custom_metrics = {"metric1": metric1_func}
+    logger = BaseEventLogger()
+    logger.register_custom_metric("metric1", metric1_func)
+    assert "metric1" in logger.custom_metrics
+
+
+def test_init_custom_metrics_empty():
+    logger = BaseEventLogger()
+    assert len(logger.custom_metrics) == 0
+
+
+# test registering a custom metric twicedef test_register_custom_metric_twice():
+def test_init_custom_metrics_register_twice():
+    logger = BaseEventLogger()
+
+    def metric_func(*args, **kwargs):
+        return None
+
+    logger.register_custom_metric("metric1", metric_func)
+    assert "metric1" in logger.custom_metrics
+    assert logger.custom_metrics["metric1"] == metric_func
+    # Register the same metric again
+    with pytest.raises(ValueError):
+        logger.register_custom_metric("metric1", metric_func)

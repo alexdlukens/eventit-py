@@ -28,6 +28,7 @@ class BaseEvent(BaseModel):
     user: Optional[str] = None
     group: Optional[str] = None
     function_name: Optional[str] = None
+    event_location: Optional[str] = None
     description: Optional[str] = Field(strict=True, default=None)
     timestamp: AwareDatetime = Field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
