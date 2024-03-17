@@ -25,7 +25,20 @@ jobs:
           PYTHON_VER_INT=$(echo "${{ matrix.python-version }}" | tr -d '.')
           PORT=$((27000 + PYTHON_VER_INT))
           echo "port=$PORT" >> $GITHUB_OUTPUT
-
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Cache Poetry virtual environment
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-pypoetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pypoetry-
       - name: Setup MongoDB service
         uses: alexdlukens/mongodb-github-action@fa13afeb0a920f19491292b6819a6129c09fb42b
         with:
