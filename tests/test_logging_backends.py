@@ -10,6 +10,7 @@ from eventit_py.logging_backends import (
     MongoDBLoggingClient,
 )
 from eventit_py.pydantic_events import BaseEvent
+from pymongo.errors import ServerSelectionTimeoutError
 
 
 def test_base_logging_client_init(tmp_path):
@@ -239,3 +240,15 @@ def test_base_logging_client_search_events_by_query(tmp_path):
 
     with pytest.raises(NotImplementedError):
         client.search_events_by_query(query_dict, group, event_type, limit)
+
+
+def test_mongodb_logging_client_bad_mongo_uri():
+    groups = ["group1", "group2"]
+    with pytest.raises(ServerSelectionTimeoutError):
+        # should timeout due to invalid mongodb uri
+        MongoDBLoggingClient(
+            mongo_url="mongodb://localhost:9999",
+            groups=groups,
+            exclude_none=True,
+            database_name="eventit",
+        )

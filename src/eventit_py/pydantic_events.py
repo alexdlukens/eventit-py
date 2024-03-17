@@ -37,8 +37,8 @@ class BaseEvent(BaseModel):
     def ensure_utc_timezone(cls, value: datetime.datetime):
         return value.astimezone(datetime.timezone.utc)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return f"BaseEvent(timestamp={self.timestamp.isoformat()}, description={self.description})"
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: no cover
         return str(self.model_dump_json())
