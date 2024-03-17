@@ -90,6 +90,27 @@ class BaseLoggingClient:
             "search_events_by_query method must be implemented in derived classes"
         )
 
+    def count_events_by_query(
+        self,
+        query_dict: dict,
+        group: str,
+        event_type: BaseEvent,
+    ) -> int:
+        """
+        Count the number of times an event has occurred based on a query dictionary for a specific group and event type.
+
+        Args:
+            query_dict (dict): A dictionary where the key is the field to match and the value is the value to match.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+
+        Returns:
+            int: The number of events that match the query for the specified group and event type.
+        """
+        raise NotImplementedError(
+            "count_events_by_query method must be implemented in derived classes"
+        )
+
 
 class FileLoggingClient(BaseLoggingClient):
     """Append to files from provided filepath for logging"""
@@ -241,6 +262,29 @@ class FileLoggingClient(BaseLoggingClient):
                     continue
         return sorted(events, key=lambda x: x.timestamp)
 
+    def count_events_by_query(
+        self,
+        query_dict: dict,
+        group: str,
+        event_type: BaseEvent,
+    ) -> int:
+        """
+        Count the number of times an event has occurred based on a query dictionary for a specific group and event type.
+
+        Args:
+            query_dict (dict): A dictionary where the key is the field to match and the value is the value to match.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+
+        Returns:
+            int: The number of events that match the query for the specified group and event type.
+        """
+        return len(
+            self.search_events_by_query(
+                query_dict=query_dict, group=group, event_type=event_type, limit=None
+            )
+        )
+
 
 class MongoDBLoggingClient(BaseLoggingClient):
     """
@@ -272,11 +316,11 @@ class MongoDBLoggingClient(BaseLoggingClient):
     ) -> None:
         super().__init__(groups, exclude_none)
         logger.debug("Initializing MongoDBLoggingClient")
-        try:
+        try:  # pragma: no cover
             from bson.codec_options import CodecOptions
             from pymongo import MongoClient
             from pymongo.errors import ServerSelectionTimeoutError
-        except ImportError:
+        except ImportError:  # pragma: no cover
             logger.exception(
                 "Failed to import from PyMongo in MongoDBLoggingClient constructor"
             )
@@ -388,3 +432,30 @@ class MongoDBLoggingClient(BaseLoggingClient):
         cursor = self._db[group].find(query_dict).limit(limit if limit else 0)
         events: List[BaseEvent] = [event_type(**doc) for doc in cursor]
         return sorted(events, key=lambda x: x.timestamp)
+
+    def count_events_by_query(
+        self,
+        query_dict: dict,
+        group: str,
+        event_type: BaseEvent,
+    ) -> int:
+        """
+        Count the number of times an event has occurred based on a query dictionary for a specific group and event type.
+
+        Args:
+            query_dict (dict): A dictionary where the key is the field to match and the value is the value to match.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+
+        Returns:
+            int: The number of events that match the query for the specified group and event type.
+        """
+        if group not in self._groups:
+            raise ValueError(f"Invalid group {group} provided")
+
+        # ensure all fields in query dict are in event_type class
+        for key in query_dict.keys():
+            if key not in event_type.model_fields:
+                raise ValueError(f"Invalid key {key} in query_dict")
+
+        return self._db[group].count_documents(query_dict)
