@@ -1,4 +1,5 @@
 import datetime
+import inspect
 import logging
 import pathlib
 from typing import Callable, Union
@@ -9,6 +10,42 @@ from eventit_py.pydantic_events import BaseEvent
 logger = logging.getLogger(__name__)
 
 DEFAULT_LOG_FILEPATH = "eventit.log"
+
+
+def _get_external_location(*args, **kwargs) -> str:
+    """
+    Returns the location of the calling function.
+
+    Args:
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+
+    Returns:
+        str: The location of the calling function.
+    """
+    caller_frame = inspect.currentframe().f_back
+    frame_info = inspect.getframeinfo(caller_frame)
+
+    # check if the function is called from within eventit_py
+    while "eventit_py" in frame_info.filename:
+        caller_frame = caller_frame.f_back
+        if caller_frame is None:
+            return None
+        frame_info = inspect.getframeinfo(caller_frame)
+
+    # Get the module name
+    module_name = inspect.getmodulename(frame_info.filename)
+    if module_name is None:
+        module_name = pathlib.Path(frame_info.filename).name
+
+    # Get the package name
+    package_name = module_name.split(".")[0] if "." in module_name else module_name
+    if package_name == module_name:
+        location_string = f"{module_name}:{frame_info.function}"
+    else:
+        location_string = f"{package_name}.{module_name}:{frame_info.function}"
+
+    return location_string
 
 
 def _handle_timestamp(*args, **kwargs):
@@ -100,6 +137,7 @@ class BaseEventLogger:
             "timestamp": _handle_timestamp,
             "function_name": _return_function_name,
             "group": _return_group,
+            "event_location": _get_external_location,
         }
 
         self.custom_metrics: dict[str, Callable] = {}
@@ -128,6 +166,24 @@ class BaseEventLogger:
             )
 
         logger.debug("BaseEventLogger configuration complete")
+
+    def register_custom_metric(self, metric: str, func: Callable):
+        """Register a user-defined metric on name provided, to be retrieved using provided function
+
+        Args:
+            metric (str): name of new metric
+            func (Callable): function to retrieve specified metric
+
+        Raises:
+            ValueError: If metric specified by name already present in builtin_metrics or custom_metrics
+        """
+        if metric in self.builtin_metrics:
+            raise ValueError(f"Metric '{metric}' already present in builtin metrics")
+        elif metric in self.custom_metrics:
+            raise ValueError(
+                f"Metric '{metric}' registered multiple times as custom metric"
+            )
+        self.custom_metrics[metric] = func
 
     def log_event(self):
         raise NotImplementedError(
