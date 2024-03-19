@@ -41,7 +41,7 @@ def test_mongodb_many_events(get_mongo_uri):
 
     timestamps: list[datetime.datetime] = []
     timestamps.append(datetime.datetime.now(tz=datetime.timezone.utc))
-
+    time.sleep(0.001)
     # enter 1000 records, keeping track of after timestamps
     for _ in range(1000):
         this_is_a_mongodb_test()

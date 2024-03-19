@@ -172,3 +172,37 @@ def test_mongodb_logging_client_search_bad_query(get_mongo_uri):
     # bad group
     with pytest.raises(ValueError):
         client.search_events_by_query({}, "group3", event_type, limit)
+
+
+def test_get_event_by_uuid_mongodb(get_mongo_uri):
+    groups = ["group1", "group2"]
+    client = MongoDBLoggingClient(
+        mongo_url=get_mongo_uri,
+        groups=groups,
+        exclude_none=True,
+    )
+
+    group = "group1"
+    event_type = MyEvent
+
+    event1 = MyEvent(field1="value1", field2=2)
+    client.log_message(event1, group)
+
+    assert client.get_event_by_uuid(event1.uuid, group, event_type) == event1
+
+
+def test_get_event_by_uuid_file(tmp_path):
+    groups = ["group1", "group2"]
+    client = FileLoggingClient(
+        directory=str(tmp_path / "logs"),
+        groups=groups,
+        exclude_none=True,
+    )
+
+    group = "group1"
+    event_type = MyEvent
+
+    event1 = MyEvent(field1="value1", field2=2)
+    client.log_message(event1, group)
+
+    assert client.get_event_by_uuid(event1.uuid, group, event_type) == event1

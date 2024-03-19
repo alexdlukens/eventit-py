@@ -1,9 +1,12 @@
+import datetime
 import json
 import os
 import shutil
+import time
 from unittest.mock import ANY
 
 from eventit_py.event_logger import EventLogger
+from eventit_py.pydantic_events import BaseEvent
 
 # cur_path = pathlib.Path(__file__)
 # sys.path.insert(0, cur_path.parent.parent)
@@ -28,24 +31,32 @@ def test_event_logger_setup(tmp_path):
 
 def test_event_logger_single_event(tmp_path):
     tmp_file = tmp_path / "default.log"
+    start_time = datetime.datetime.now(tz=datetime.timezone.utc)
     if tmp_path.exists():
         shutil.rmtree(tmp_path, ignore_errors=True)
 
     try:
         eventit = EventLogger(directory=str(tmp_path))
 
-        @eventit.event(tracking_details={"timestamp": True})
+        @eventit.event(tracking_details={})
         def this_is_a_test():
             return "Hello, World"
 
+        time.sleep(0.01)
         print(this_is_a_test())
-
+        time.sleep(0.1)
+        end_time = datetime.datetime.now(tz=datetime.timezone.utc)
         with open(tmp_file, "r", encoding="utf-8") as f:
             assert len(lines := f.readlines()) == 1
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
             }
+
+            loaded_event = BaseEvent.model_validate(first_line)
+            assert loaded_event.timestamp > start_time
+            assert loaded_event.timestamp < end_time
 
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
@@ -59,7 +70,7 @@ def test_event_function_name(tmp_path):
     try:
         eventit = EventLogger(directory=tmp_path)
 
-        @eventit.event(tracking_details={"timestamp": True, "function_name": True})
+        @eventit.event(tracking_details={"function_name": True})
         def this_is_a_test():
             return "Hello, World"
 
@@ -70,6 +81,7 @@ def test_event_function_name(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "function_name": "this_is_a_test",
             }
 
@@ -93,6 +105,7 @@ def test_log_separate_event_default(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "event_location": "test_eventit_general:test_log_separate_event_default",
                 "group": "default",
                 "function_name": "Banana",
@@ -107,12 +120,14 @@ def test_log_separate_event_default(tmp_path):
             second_line = json.loads(lines[1])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "event_location": "test_eventit_general:test_log_separate_event_default",
                 "group": "default",
                 "function_name": "Banana",
             }
             assert second_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "event_location": "test_eventit_general:test_log_separate_event_default",
                 "group": "default",
             }
@@ -139,7 +154,7 @@ def test_setup_custom_group(tmp_path):
 
         @eventit.event(
             group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": False},
+            tracking_details={"function_name": True, "group": False},
         )
         def this_is_a_test():
             return "Hello, World"
@@ -151,6 +166,7 @@ def test_setup_custom_group(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "function_name": "this_is_a_test",
             }
 
@@ -174,14 +190,14 @@ def test_setup_custom_group_single_file(tmp_path):
 
         @eventit.event(
             group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
+            tracking_details={"function_name": True, "group": True},
         )
         def this_is_a_test():
             return "Hello, World"
 
         @eventit.event(
             group="default",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
+            tracking_details={"function_name": True, "group": True},
         )
         def this_is_a_test2():
             return "Hello, World2"
@@ -195,12 +211,14 @@ def test_setup_custom_group_single_file(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "function_name": "this_is_a_test",
                 "group": "custom1",
             }
             second_line = json.loads(lines[1])
             assert second_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "function_name": "this_is_a_test2",
                 "group": "default",
             }
@@ -228,7 +246,7 @@ def test_multiple_groups_single_file(tmp_path):
 
         @eventit.event(
             group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
+            tracking_details={"function_name": True, "group": True},
         )
         def this_is_a_test():
             return "Hello, World"
@@ -240,6 +258,7 @@ def test_multiple_groups_single_file(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "function_name": "this_is_a_test",
                 "group": "custom1",
             }

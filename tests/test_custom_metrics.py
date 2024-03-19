@@ -42,7 +42,6 @@ def test_setup_custom_metric(tmp_path):
         @eventit.event(
             group="custom1",
             tracking_details={
-                "timestamp": True,
                 "function_name": True,
                 "group": False,
                 "increment": True,
@@ -60,12 +59,14 @@ def test_setup_custom_metric(tmp_path):
             first_line = json.loads(lines[0])
             assert first_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "function_name": "this_is_a_test",
                 "increment": 6,
             }
             second_line = json.loads(lines[1])
             assert second_line == {
                 "timestamp": ANY,
+                "uuid": ANY,
                 "function_name": "this_is_a_test",
                 "increment": 7,
             }
@@ -107,7 +108,6 @@ def test_custom_metric_long(tmp_path):
         @eventit.event(
             group="custom1",
             tracking_details={
-                "timestamp": True,
                 "function_name": True,
                 "group": False,
                 "increment": True,
@@ -126,6 +126,7 @@ def test_custom_metric_long(tmp_path):
                 line = json.loads(lines[i])
                 assert line == {
                     "timestamp": ANY,
+                    "uuid": ANY,
                     "function_name": "this_is_a_test",
                     "increment": i + 6,
                 }

@@ -1,4 +1,3 @@
-import datetime
 import inspect
 import logging
 import pathlib
@@ -46,20 +45,6 @@ def _get_external_location(*args, **kwargs) -> str:
         location_string = f"{package_name}.{module_name}:{frame_info.function}"
 
     return location_string
-
-
-def _handle_timestamp(*args, **kwargs):
-    """
-    Returns the current timestamp in UTC timezone.
-
-    Args:
-        *args: Variable length argument list.
-        **kwargs: Arbitrary keyword arguments.
-
-    Returns:
-        datetime.datetime: The current timestamp in UTC timezone.
-    """
-    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 def _return_function_name(func: Callable, *args, **kwargs) -> Union[str, None]:
@@ -133,8 +118,8 @@ class BaseEventLogger:
         self._default_event_group = kwargs.get("default_event_group", "default")
         self.groups.append(self._default_event_group)
         self.groups = list(set(self.groups))
+        self.required_metrics = set(["timestamp", "uuid"])
         self.builtin_metrics: dict[str, Callable] = {
-            "timestamp": _handle_timestamp,
             "function_name": _return_function_name,
             "group": _return_group,
             "event_location": _get_external_location,
@@ -177,9 +162,11 @@ class BaseEventLogger:
         Raises:
             ValueError: If metric specified by name already present in builtin_metrics or custom_metrics
         """
+        if metric in self.required_metrics:
+            raise ValueError(f"Metric '{metric}' already present in required metrics")
         if metric in self.builtin_metrics:
             raise ValueError(f"Metric '{metric}' already present in builtin metrics")
-        elif metric in self.custom_metrics:
+        if metric in self.custom_metrics:
             raise ValueError(
                 f"Metric '{metric}' registered multiple times as custom metric"
             )
