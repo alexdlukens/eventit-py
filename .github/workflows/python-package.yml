@@ -40,7 +40,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pypoetry-
       - name: Setup MongoDB service
-        uses: alexdlukens/mongodb-github-action@5548f2ad79d084e1e228a82452910682d7f79871
+        uses: alexdlukens/mongodb-github-action@cfd62412ca92cd39081beae147ffa8afa9592a4b
         with:
           mongodb-version: 4.4
           mongodb-username: root
