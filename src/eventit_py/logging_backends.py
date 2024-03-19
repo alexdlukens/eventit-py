@@ -111,6 +111,24 @@ class BaseLoggingClient:
             "count_events_by_query method must be implemented in derived classes"
         )
 
+    def get_event_by_uuid(
+        self, uuid: str, group: str, event_type: BaseEvent
+    ) -> BaseEvent:
+        """
+        Retrieve an event by its UUID.
+
+        Args:
+            uuid (str): The UUID of the event to retrieve.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+
+        Returns:
+            BaseModel: The event that matches the UUID for the specified group and event type.
+        """
+        raise NotImplementedError(
+            "get_event_by_uuid method must be implemented in derived classes"
+        )
+
 
 class FileLoggingClient(BaseLoggingClient):
     """Append to files from provided filepath for logging"""
@@ -285,6 +303,27 @@ class FileLoggingClient(BaseLoggingClient):
             )
         )
 
+    def get_event_by_uuid(
+        self, uuid: str, group: str, event_type: BaseEvent
+    ) -> BaseEvent:
+        """
+        Retrieve an event by its UUID.
+
+        Args:
+            uuid (str): The UUID of the event to retrieve.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+
+        Returns:
+            BaseModel: The event that matches the UUID for the specified group and event type.
+        """
+        found_event = self.search_events_by_query(
+            query_dict={"uuid": uuid}, group=group, event_type=event_type, limit=1
+        )
+        if len(found_event) == 0:
+            return None
+        return found_event[0]
+
 
 class MongoDBLoggingClient(BaseLoggingClient):
     """
@@ -330,7 +369,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
         if self._database_name is None:
             self._database_name = DEFAULT_DATABASE_NAME
 
-        self._mongo_client = MongoClient(self._mongo_url)
+        self._mongo_client = MongoClient(self._mongo_url, serverSelectionTimeoutMS=5000)
         try:
             self._mongo_client.list_database_names()
         except ServerSelectionTimeoutError:
@@ -430,7 +469,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
                 raise ValueError(f"Invalid key {key} in query_dict")
 
         cursor = self._db[group].find(query_dict).limit(limit if limit else 0)
-        events: List[BaseEvent] = [event_type(**doc) for doc in cursor]
+        events: List[BaseEvent] = [event_type.model_validate(doc) for doc in cursor]
         return sorted(events, key=lambda x: x.timestamp)
 
     def count_events_by_query(
@@ -459,3 +498,26 @@ class MongoDBLoggingClient(BaseLoggingClient):
                 raise ValueError(f"Invalid key {key} in query_dict")
 
         return self._db[group].count_documents(query_dict)
+
+    def get_event_by_uuid(
+        self, uuid: str, group: str, event_type: BaseEvent
+    ) -> BaseEvent:
+        """
+        Retrieve an event by its UUID.
+
+        Args:
+            uuid (str): The UUID of the event to retrieve.
+            group (str): The group to search events in.
+            event_type (str): The type of event to retrieve.
+
+        Returns:
+            BaseModel: The event that matches the UUID for the specified group and event type.
+        """
+        if not isinstance(uuid, str):
+            uuid = str(uuid)
+        found_event = self.search_events_by_query(
+            query_dict={"uuid": uuid}, group=group, event_type=event_type, limit=1
+        )
+        if len(found_event) == 0:
+            return None
+        return found_event[0]

@@ -46,7 +46,6 @@ def test_init_builtin_metrics():
         "event_location",
         "function_name",
         "group",
-        "timestamp",
     ]
 
 

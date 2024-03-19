@@ -38,10 +38,11 @@ def test_event_logger_single_event(tmp_path):
     try:
         eventit = EventLogger(directory=str(tmp_path))
 
-        @eventit.event(tracking_details={"timestamp": True})
+        @eventit.event(tracking_details={})
         def this_is_a_test():
             return "Hello, World"
 
+        time.sleep(0.01)
         print(this_is_a_test())
         time.sleep(0.1)
         end_time = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -69,7 +70,7 @@ def test_event_function_name(tmp_path):
     try:
         eventit = EventLogger(directory=tmp_path)
 
-        @eventit.event(tracking_details={"timestamp": True, "function_name": True})
+        @eventit.event(tracking_details={"function_name": True})
         def this_is_a_test():
             return "Hello, World"
 
@@ -153,7 +154,7 @@ def test_setup_custom_group(tmp_path):
 
         @eventit.event(
             group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": False},
+            tracking_details={"function_name": True, "group": False},
         )
         def this_is_a_test():
             return "Hello, World"
@@ -189,14 +190,14 @@ def test_setup_custom_group_single_file(tmp_path):
 
         @eventit.event(
             group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
+            tracking_details={"function_name": True, "group": True},
         )
         def this_is_a_test():
             return "Hello, World"
 
         @eventit.event(
             group="default",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
+            tracking_details={"function_name": True, "group": True},
         )
         def this_is_a_test2():
             return "Hello, World2"
@@ -245,7 +246,7 @@ def test_multiple_groups_single_file(tmp_path):
 
         @eventit.event(
             group="custom1",
-            tracking_details={"timestamp": True, "function_name": True, "group": True},
+            tracking_details={"function_name": True, "group": True},
         )
         def this_is_a_test():
             return "Hello, World"

@@ -42,7 +42,6 @@ def test_setup_custom_metric(tmp_path):
         @eventit.event(
             group="custom1",
             tracking_details={
-                "timestamp": True,
                 "function_name": True,
                 "group": False,
                 "increment": True,
@@ -109,7 +108,6 @@ def test_custom_metric_long(tmp_path):
         @eventit.event(
             group="custom1",
             tracking_details={
-                "timestamp": True,
                 "function_name": True,
                 "group": False,
                 "increment": True,

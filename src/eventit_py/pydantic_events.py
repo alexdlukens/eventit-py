@@ -15,10 +15,27 @@ from pydantic import (
 logger = logging.getLogger(__name__)
 
 
+def _handle_timestamp(*args, **kwargs):
+    """
+    Returns the current timestamp in UTC timezone.
+
+    Args:
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+
+    Returns:
+        datetime.datetime: The current timestamp in UTC timezone.
+    """
+    value = datetime.datetime.now(tz=datetime.timezone.utc)
+    return value.replace(microsecond=int(value.microsecond / 1000) * 1000)
+
+
 class BaseEvent(BaseModel):
     """
     Base class to be used for event tracking. Can be specialized for specific applications
     (Flask, Django, add custom data fields, etc)
+
+    Timestamp and UUID fields are always present, and automatically generated
 
     Args:
         user (Optional[str]): The user associated with the event.
@@ -27,7 +44,7 @@ class BaseEvent(BaseModel):
         event_location (Optional[str]): The location of the event.
         description (Optional[str]): The description of the event.
         uuid (UUID4): The UUID of the event.
-        timestamp (AwareDatetime): The timestamp of the event in UTC timezone.
+        timestamp (AwareDatetime): The timestamp of the event in UTC timezone. Uses millisecond accuracy
 
     Functions:
         ensure_utc_timezone(value: datetime.datetime): A field validator method to ensure the timestamp is in UTC timezone.
@@ -42,13 +59,14 @@ class BaseEvent(BaseModel):
     event_location: Optional[str] = None
     description: Optional[str] = Field(strict=True, default=None)
     uuid: UUID4 = Field(default_factory=uuid.uuid4)
-    timestamp: AwareDatetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
-    )
+    timestamp: AwareDatetime = Field(default_factory=_handle_timestamp)
 
     @field_validator("timestamp")
+    @classmethod
     def ensure_utc_timezone(cls, value: datetime.datetime):
-        return value.astimezone(datetime.timezone.utc)
+        return value.astimezone(datetime.timezone.utc).replace(
+            microsecond=int(value.microsecond / 1000) * 1000
+        )
 
     @field_serializer("uuid")
     def serialize_uuid(self, value: UUID4, _info):
