@@ -380,6 +380,18 @@ class MongoDBLoggingClient(BaseLoggingClient):
         self._db = self._mongo_client[self._database_name].with_options(
             CodecOptions(tz_aware=True)
         )
+        self._configure_indices()
+
+    def _configure_indices(self) -> None:
+        """Configure indices for each group in the database.
+
+        This method adds an index on the `uuid` field and the `timestamp` field for each group in the database.
+        The `uuid` field has a uniqueness constraint, while the `timestamp` field does not.
+        """
+        # add index on uuid field and timestamp field with uniqueness constraint, for each group
+        for group in self._groups:
+            self._db[group].create_index([("uuid", 1)], unique=True, name="uuid_index")
+            self._db[group].create_index([("timestamp", 1)], name="timestamp_index")
 
     def reset_db(self):
         """
