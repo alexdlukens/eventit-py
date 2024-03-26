@@ -6,11 +6,17 @@
 
 # EventIT Library for Python
 
-This repo is intended to be the core event tracking framework that will be built-upon in other applications (e.g. Authentication event tracking, logs, etc.)
+This repo is intended to be the core event tracking framework that will be built-upon in other applications
 
 ## Overview
+In this context, an event is a "log", as a dictionary with pre-defined fields. These fields are defined in Pydantic models, which validate the event during the logging process.
 
-Pass for now
+### Features
+- Pydantic validation
+- Custom user-defined metrics
+- Support for various backend data-storage services (MongoDB as primary data backend)
+- Support for different "types" of events, such as rate-based, authentication-based, etc. (TODO)
+- Integration with cross-platform frameworks, such as OpenTelemetry, Flask, FastAPI, etc. (TODO)
 
 ## Developer details
 
