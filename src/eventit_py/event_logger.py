@@ -1,9 +1,15 @@
+import datetime
 import functools
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, Type
 
 from eventit_py.base_logger import BaseEventLogger
-from eventit_py.pydantic_events import BaseEvent
+from eventit_py.pydantic_events import (
+    BaseCountableEvent,
+    BaseEvent,
+    _handle_timestamp,
+    _subtract_time_delta,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +43,7 @@ class EventLogger(BaseEventLogger):
         func: Callable = None,
         description: str = None,
         tracking_details: dict[str, bool] = None,
-        event_type: Callable = None,
+        event_type: Type[BaseEvent] = None,
         group: str = None,
     ) -> None:
         """Main function used to log information. Inherits builtin metrics from BaseEventLogger.
@@ -94,18 +100,76 @@ class EventLogger(BaseEventLogger):
                 metric=metric, func=func, context=tracking_context
             )
 
-        # make event from details
-        event = event_type(**api_event_details)
+        # check if event_type is a countable event, and
+        # attempt to retrieve event from within time range, if possible
+        if issubclass(event_type, BaseCountableEvent):
+            self.log_countable_event(
+                api_event_details=api_event_details,
+                event_type=event_type,
+                group=group,
+            )
+        else:
+            # make event from details
+            event = event_type(**api_event_details)
 
-        # log to chosen db client
-        self.db_client.log_message(message=event, group=group)
+            # log to chosen db client
+            self.db_client.log_message(message=event, group=group)
+
+    def log_countable_event(
+        self,
+        api_event_details: dict,
+        event_type: Type[BaseCountableEvent],
+        group: str,
+    ):
+        # get time window from tracking details, default to using event_type time window
+        time_window = datetime.timedelta(
+            seconds=(
+                api_event_details.get(
+                    "time_window", event_type.model_fields["time_window"].default
+                )
+            )
+        )
+        # get current timestamp
+        current_timestamp = _handle_timestamp()
+        # compute even division of time for timestamp based on current timestamp and time_window
+        timestamp = _subtract_time_delta(current_timestamp, time_window)[0]
+        api_event_details["timestamp"] = timestamp
+        # try to find event with matching timestamp
+        assert timestamp.timestamp() % int(time_window.total_seconds()) == 0
+
+        event = self.db_client.search_events_by_query(
+            query_dict=api_event_details,
+            group=group,
+            event_type=event_type,
+            limit=1,
+        )
+
+        # no event for the current time window exists, so we make it
+        if len(event) == 0:
+            # make event from details
+            event = event_type(**api_event_details)
+
+            # log message here
+            self.db_client.log_message(message=event, group=group)
+
+        else:
+            event = event_type.model_validate(event[0])
+            # increment event count
+            event.count += 1
+
+            # update in db based on uuid
+            response = self.db_client.update_event_by_uuid(group=group, event=event)
+            if response["modified_count"] != 1:
+                raise ValueError(
+                    f"failed to update event with uuid {event.uuid} in group {group}"
+                )
 
     def event(
         self,
         func: Callable = None,
         description: str = None,
         tracking_details: dict[str, bool] = None,
-        event_type: Callable = None,
+        event_type: Type[BaseEvent] = None,
         group=None,
     ) -> Callable:
         """Wrapper to be placed around functions that want logging functionality before they are called.

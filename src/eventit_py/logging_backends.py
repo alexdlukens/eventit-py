@@ -129,6 +129,21 @@ class BaseLoggingClient:
             "get_event_by_uuid method must be implemented in derived classes"
         )
 
+    def update_event_by_uuid(self, group: str, event: BaseEvent) -> dict[str, int]:
+        """
+        Update an event by its UUID. Retrieves UUID from event object.
+
+        Args:
+            group (str): The group to update the event in.
+            event (BaseModel): The updated event to store.
+
+        Returns:
+            None
+        """
+        raise NotImplementedError(
+            "update_event_by_uuid method must be implemented in derived classes"
+        )
+
 
 class FileLoggingClient(BaseLoggingClient):
     """Append to files from provided filepath for logging"""
@@ -533,3 +548,26 @@ class MongoDBLoggingClient(BaseLoggingClient):
         if len(found_event) == 0:
             return None
         return found_event[0]
+
+    def update_event_by_uuid(self, group: str, event: BaseEvent) -> dict[str, int]:
+        """
+        Update an event by its UUID.
+
+        Args:
+            uuid (str): The UUID of the event to update.
+            group (str): The group to update the event in.
+            event (BaseModel): The updated event to store.
+
+        Returns:
+            None
+        """
+        update_response = self._db[group].update_one(
+            {"uuid": str(event.uuid)},
+            {"$set": event.model_dump(exclude_none=self.exclude_none)},
+        )
+
+        response_obj = {
+            "matched_count": update_response.matched_count,
+            "modified_count": update_response.modified_count,
+        }
+        return response_obj
