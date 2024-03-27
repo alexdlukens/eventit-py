@@ -8,7 +8,6 @@ from pydantic import (
     AwareDatetime,
     BaseModel,
     Field,
-    field_serializer,
     field_validator,
 )
 
@@ -79,10 +78,6 @@ class BaseEvent(BaseModel):
         return value.astimezone(datetime.timezone.utc).replace(
             microsecond=int(value.microsecond / 1000) * 1000
         )
-
-    @field_serializer("uuid")
-    def serialize_uuid(self, value: UUID4, _info):
-        return str(value)
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"BaseEvent(timestamp={self.timestamp.isoformat()}, description={self.description})"

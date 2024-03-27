@@ -3,6 +3,7 @@
 import io
 import logging
 import pathlib
+import uuid
 from datetime import datetime
 from typing import List, TextIO
 
@@ -319,13 +320,13 @@ class FileLoggingClient(BaseLoggingClient):
         )
 
     def get_event_by_uuid(
-        self, uuid: str, group: str, event_type: BaseEvent
+        self, uuid_obj: uuid.UUID, group: str, event_type: BaseEvent
     ) -> BaseEvent:
         """
         Retrieve an event by its UUID.
 
         Args:
-            uuid (str): The UUID of the event to retrieve.
+            uuid_obj (uuid.UUID): The UUID of the event to retrieve.
             group (str): The group to search events in.
             event_type (str): The type of event to retrieve.
 
@@ -333,7 +334,7 @@ class FileLoggingClient(BaseLoggingClient):
             BaseModel: The event that matches the UUID for the specified group and event type.
         """
         found_event = self.search_events_by_query(
-            query_dict={"uuid": uuid}, group=group, event_type=event_type, limit=1
+            query_dict={"uuid": uuid_obj}, group=group, event_type=event_type, limit=1
         )
         if len(found_event) == 0:
             return None
@@ -371,6 +372,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
         super().__init__(groups, exclude_none)
         logger.debug("Initializing MongoDBLoggingClient")
         try:  # pragma: no cover
+            from bson.binary import UuidRepresentation
             from bson.codec_options import CodecOptions
             from pymongo import MongoClient
             from pymongo.errors import ServerSelectionTimeoutError
@@ -384,7 +386,11 @@ class MongoDBLoggingClient(BaseLoggingClient):
         if self._database_name is None:
             self._database_name = DEFAULT_DATABASE_NAME
 
-        self._mongo_client = MongoClient(self._mongo_url, serverSelectionTimeoutMS=5000)
+        self._mongo_client = MongoClient(
+            self._mongo_url,
+            serverSelectionTimeoutMS=5000,
+            uuidRepresentation="standard",
+        )
         try:
             self._mongo_client.list_database_names()
         except ServerSelectionTimeoutError:
@@ -393,7 +399,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
         logger.debug("Initial MongoDB connection successful")
         self.reset_db()
         self._db = self._mongo_client[self._database_name].with_options(
-            CodecOptions(tz_aware=True)
+            CodecOptions(tz_aware=True, uuid_representation=UuidRepresentation.STANDARD)
         )
         self._configure_indices()
 
@@ -527,23 +533,24 @@ class MongoDBLoggingClient(BaseLoggingClient):
         return self._db[group].count_documents(query_dict)
 
     def get_event_by_uuid(
-        self, uuid: str, group: str, event_type: BaseEvent
+        self, uuid_obj: uuid.UUID, group: str, event_type: BaseEvent
     ) -> BaseEvent:
         """
         Retrieve an event by its UUID.
 
         Args:
-            uuid (str): The UUID of the event to retrieve.
+            uuid_obj (str): The UUID of the event to retrieve.
             group (str): The group to search events in.
             event_type (str): The type of event to retrieve.
 
         Returns:
             BaseModel: The event that matches the UUID for the specified group and event type.
         """
-        if not isinstance(uuid, str):
-            uuid = str(uuid)
+        if not isinstance(uuid_obj, uuid.UUID):
+            uuid_obj = uuid.UUID(uuid_obj)
+
         found_event = self.search_events_by_query(
-            query_dict={"uuid": uuid}, group=group, event_type=event_type, limit=1
+            query_dict={"uuid": uuid_obj}, group=group, event_type=event_type, limit=1
         )
         if len(found_event) == 0:
             return None
@@ -562,7 +569,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
             None
         """
         update_response = self._db[group].update_one(
-            {"uuid": str(event.uuid)},
+            {"uuid": event.uuid},
             {"$set": event.model_dump(exclude_none=self.exclude_none)},
         )
 
