@@ -354,12 +354,6 @@ class MongoDBLoggingClient(BaseLoggingClient):
         exclude_none (bool, optional): Whether to exclude None values when logging. Defaults to True.
         database_name (str, optional): The name of the MongoDB database to use. If not provided, a default name will be used.
 
-    Methods:
-        __init__: Initializes the MongoDBLoggingClient instance.
-        reset_db: Resets the database by dropping the current database from MongoDB.
-        log_message: Logs a message into MongoDB.
-        search_events_by_timestamp: Search events within a specified time range for a specific group and event type.
-
     """
 
     def __init__(
