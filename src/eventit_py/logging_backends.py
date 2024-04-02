@@ -5,7 +5,11 @@ import logging
 import pathlib
 import uuid
 from datetime import datetime
-from typing import List, TextIO
+from shutil import copyfile
+from tempfile import NamedTemporaryFile
+from typing import List, TextIO, TypeVar
+
+from pydantic import ValidationError
 
 from eventit_py.pydantic_events import BaseEvent
 
@@ -13,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 BACKEND_TYPES = ["mongodb", "filepath"]
 DEFAULT_DATABASE_NAME = "eventit"
+
+BaseEventType = TypeVar("BaseEventType", bound=BaseEvent)
 
 
 class BaseLoggingClient:
@@ -48,9 +54,9 @@ class BaseLoggingClient:
         start_time: datetime,
         end_time: datetime,
         group: str,
-        event_type: BaseEvent,
+        event_type: BaseEventType,
         limit: int = None,
-    ) -> List[BaseEvent]:
+    ) -> List[BaseEventType]:
         """
         Search events within a specified time range for a specific group and event type.
 
@@ -58,7 +64,7 @@ class BaseLoggingClient:
             start_time (datetime): The start time of the search range.
             end_time (datetime): The end time of the search range.
             group (str): The group to search events in.
-            event_type (str): The type of event to retrieve.
+            event_type (BaseEventType): The type of event to retrieve.
             limit (int, optional): The maximum number of events to return. Defaults to None.
 
         Returns:
@@ -72,16 +78,16 @@ class BaseLoggingClient:
         self,
         query_dict: dict,
         group: str,
-        event_type: BaseEvent,
+        event_type: BaseEventType,
         limit: int = None,
-    ) -> List[BaseEvent]:
+    ) -> List[BaseEventType]:
         """
         Search events based on a query dictionary for a specific group and event type.
 
         Args:
             query_dict (dict): A dictionary where the key is the field to match and the value is the value to match.
             group (str): The group to search events in.
-            event_type (str): The type of event to retrieve.
+            event_type (BaseEventType): The type of event to retrieve.
             limit (int, optional): The maximum number of events to return. Defaults to None.
 
         Returns:
@@ -113,8 +119,8 @@ class BaseLoggingClient:
         )
 
     def get_event_by_uuid(
-        self, uuid: str, group: str, event_type: BaseEvent
-    ) -> BaseEvent:
+        self, uuid_obj: str, group: str, event_type: BaseEventType
+    ) -> BaseEventType:
         """
         Retrieve an event by its UUID.
 
@@ -130,7 +136,9 @@ class BaseLoggingClient:
             "get_event_by_uuid method must be implemented in derived classes"
         )
 
-    def update_event_by_uuid(self, group: str, event: BaseEvent) -> dict[str, int]:
+    def update_event_by_uuid(
+        self, group: str, event: BaseEvent, event_type: BaseEventType
+    ) -> dict[str, int]:
         """
         Update an event by its UUID. Retrieves UUID from event object.
 
@@ -201,7 +209,7 @@ class FileLoggingClient(BaseLoggingClient):
                 logger.debug("Closing handle to file %s", self._filepaths[group])
                 file_handle.close()
 
-    def log_message(self, message: BaseEvent, group: str) -> None:
+    def log_message(self, message: BaseEventType, group: str) -> None:
         """Record the message provided into a single line, on the file opened
         Write newline to put next message on separate line (jsonlines format)
         Force file to be flushed to keep consistency for now
@@ -223,9 +231,9 @@ class FileLoggingClient(BaseLoggingClient):
         start_time: datetime,
         end_time: datetime,
         group: str,
-        event_type: BaseEvent,
+        event_type: BaseEventType,
         limit: int = None,
-    ) -> List[BaseEvent]:
+    ) -> List[BaseEventType]:
         """
         Search events within a specified time range for a specific group and event type.
 
@@ -254,8 +262,8 @@ class FileLoggingClient(BaseLoggingClient):
         return sorted(events, key=lambda x: x.timestamp)
 
     def search_events_by_query(
-        self, query_dict: dict, group: str, event_type: BaseEvent, limit: int = None
-    ):
+        self, query_dict: dict, group: str, event_type: BaseEventType, limit: int = None
+    ) -> List[BaseEventType]:
         """
         Search events based on a query dictionary for a specific group and event type.
 
@@ -266,7 +274,7 @@ class FileLoggingClient(BaseLoggingClient):
             limit (int, optional): The maximum number of events to return. Defaults to None.
 
         Returns:
-            List[BaseModel]: A list of events that match the query for the specified group and event type.
+            List[BaseEventType]: A list of events that match the query for the specified group and event type.
         """
         # if no limit, then we should set it to none for FileLoggingClient only
         if limit == 0:
@@ -279,10 +287,15 @@ class FileLoggingClient(BaseLoggingClient):
             if key not in event_type.model_fields:
                 raise ValueError(f"Invalid key {key} in query_dict")
 
-        events: List[BaseEvent] = []
+        events: List[BaseEventType] = []
         with open(self._filepaths[group], "r", encoding="utf-8") as file_handle:
             for line in file_handle:
-                event = event_type.model_validate_json(line)
+                try:
+                    event = event_type.model_validate_json(line)
+                except ValidationError as ve:
+                    print(f"bad line: {line}")
+                    print(ve.json())
+                    raise
                 try:
                     if all(
                         getattr(event, key) == value
@@ -300,7 +313,7 @@ class FileLoggingClient(BaseLoggingClient):
         self,
         query_dict: dict,
         group: str,
-        event_type: BaseEvent,
+        event_type: BaseEventType,
     ) -> int:
         """
         Count the number of times an event has occurred based on a query dictionary for a specific group and event type.
@@ -320,8 +333,8 @@ class FileLoggingClient(BaseLoggingClient):
         )
 
     def get_event_by_uuid(
-        self, uuid_obj: uuid.UUID, group: str, event_type: BaseEvent
-    ) -> BaseEvent:
+        self, uuid_obj: uuid.UUID, group: str, event_type: BaseEventType
+    ) -> BaseEventType:
         """
         Retrieve an event by its UUID.
 
@@ -339,6 +352,61 @@ class FileLoggingClient(BaseLoggingClient):
         if len(found_event) == 0:
             return None
         return found_event[0]
+
+    def update_event_by_uuid(
+        self, group: str, event: BaseEvent, event_type: BaseEventType
+    ) -> dict[str, int]:
+        """
+        Update an event by its UUID.
+
+        Args:
+            uuid (str): The UUID of the event to update.
+            group (str): The group to update the event in.
+            event (BaseModel): The updated event to store.
+
+        Returns:
+            None
+        """
+        # open a named temporary file in same directory as original file
+        temp_file_handle = NamedTemporaryFile(mode="w", dir=self._directory)
+        found: bool = False
+        with open(self._filepaths[group], "r", encoding="utf-8") as current_file_handle:
+            for line in current_file_handle:
+                # use pydantic to validate line
+                if found:
+                    temp_file_handle.write(line)
+                    continue
+                line_event = event_type.model_validate_json(line)
+
+                # check if line contains event with UUID to update
+                if line_event.uuid == event.uuid:
+                    # if it does, write updated event to temp file
+                    # and set flag for event found
+                    temp_file_handle.write(
+                        event.model_dump_json(exclude_none=self.exclude_none)
+                    )
+                    temp_file_handle.write("\n")  # newline after updated event
+                    found = True
+
+                # otherwise write line to temp file
+                temp_file_handle.write(line)
+
+        response_obj = {"matched_count": 0, "modified_count": 0}
+        if found:
+            temp_file_handle.flush()
+            copyfile(temp_file_handle.name, self._filepaths[group])
+            response_obj = {"matched_count": 1, "modified_count": 1}
+
+            # make new file handle to get to end of file
+            self.file_handles[group].close()
+            self.file_handles[group] = open(
+                self._filepaths[group], "a", encoding="utf-8"
+            )
+
+        # ensure temp file gets closed and deleted
+        temp_file_handle.close()
+
+        return response_obj
 
 
 class MongoDBLoggingClient(BaseLoggingClient):
@@ -449,9 +517,9 @@ class MongoDBLoggingClient(BaseLoggingClient):
         start_time: datetime,
         end_time: datetime,
         group: str,
-        event_type: BaseEvent,
+        event_type: BaseEventType,
         limit: int = None,
-    ) -> List[BaseEvent]:
+    ) -> List[BaseEventType]:
         """
         Search events within a specified time range for a specific group and event type.
 
@@ -473,8 +541,8 @@ class MongoDBLoggingClient(BaseLoggingClient):
         return sorted(events, key=lambda x: x.timestamp)
 
     def search_events_by_query(
-        self, query_dict: dict, group: str, event_type: BaseEvent, limit: int = None
-    ):
+        self, query_dict: dict, group: str, event_type: BaseEventType, limit: int = None
+    ) -> List[BaseEventType]:
         """
         Search events based on a query dictionary for a specific group and event type.
 
@@ -485,7 +553,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
             limit (int, optional): The maximum number of events to return. Defaults to None.
 
         Returns:
-            List[BaseModel]: A list of events that match the query for the specified group and event type.
+            List[BaseEventType]: A list of events that match the query for the specified group and event type.
         """
         if group not in self._groups:
             raise ValueError(f"Invalid group {group} provided")
@@ -503,7 +571,7 @@ class MongoDBLoggingClient(BaseLoggingClient):
         self,
         query_dict: dict,
         group: str,
-        event_type: BaseEvent,
+        event_type: BaseEventType,
     ) -> int:
         """
         Count the number of times an event has occurred based on a query dictionary for a specific group and event type.
@@ -527,8 +595,8 @@ class MongoDBLoggingClient(BaseLoggingClient):
         return self._db[group].count_documents(query_dict)
 
     def get_event_by_uuid(
-        self, uuid_obj: uuid.UUID, group: str, event_type: BaseEvent
-    ) -> BaseEvent:
+        self, uuid_obj: uuid.UUID, group: str, event_type: BaseEventType
+    ) -> BaseEventType:
         """
         Retrieve an event by its UUID.
 
@@ -550,7 +618,9 @@ class MongoDBLoggingClient(BaseLoggingClient):
             return None
         return found_event[0]
 
-    def update_event_by_uuid(self, group: str, event: BaseEvent) -> dict[str, int]:
+    def update_event_by_uuid(
+        self, group: str, event: BaseEvent, event_type: BaseEventType = None
+    ) -> dict[str, int]:
         """
         Update an event by its UUID.
 

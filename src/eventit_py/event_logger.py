@@ -158,7 +158,9 @@ class EventLogger(BaseEventLogger):
             event.count += 1
 
             # update in db based on uuid
-            response = self.db_client.update_event_by_uuid(group=group, event=event)
+            response = self.db_client.update_event_by_uuid(
+                group=group, event=event, event_type=event_type
+            )
             if response["modified_count"] != 1:
                 raise ValueError(
                     f"failed to update event with uuid {event.uuid} in group {group}"
