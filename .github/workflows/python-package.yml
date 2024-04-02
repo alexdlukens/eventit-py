@@ -99,3 +99,41 @@ jobs:
           path: build/
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
+  deploy_to_pypi:
+    needs:
+      - build
+      - sphinx_docs
+    if: github.ref == 'refs/tags/v*'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Setup Poetry
+        uses: Gr1N/setup-poetry@v9
+      - name: Poetry dev dependencies install
+        run: |
+          poetry install --with dev
+      - name: Build and Publish to PyPI
+        run: |
+          poetry build
+          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+          poetry publish
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      - name: Create Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: $(poetry version --no-ansi | awk -F' ' '{print $2}')
+          release_name: Eventit-py Release $(poetry version --no-ansi | awk -F' ' '{print $2}')
+          body: |
+            This is an automated release created by GitHub Actions.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
