@@ -8,7 +8,6 @@ from pydantic import (
     AwareDatetime,
     BaseModel,
     Field,
-    field_serializer,
     field_validator,
 )
 
@@ -28,6 +27,18 @@ def _handle_timestamp(*args, **kwargs):
     """
     value = datetime.datetime.now(tz=datetime.timezone.utc)
     return value.replace(microsecond=int(value.microsecond / 1000) * 1000)
+
+
+def _subtract_time_delta(
+    time_obj: datetime.datetime, delta: datetime.timedelta
+) -> tuple[datetime.datetime, datetime.timedelta]:
+    seconds = int(time_obj.timestamp())
+    remainder = datetime.timedelta(
+        seconds=seconds % delta.total_seconds(),
+        microseconds=time_obj.microsecond,
+    )
+    quotient = time_obj - remainder
+    return quotient, remainder
 
 
 class BaseEvent(BaseModel):
@@ -68,12 +79,28 @@ class BaseEvent(BaseModel):
             microsecond=int(value.microsecond / 1000) * 1000
         )
 
-    @field_serializer("uuid")
-    def serialize_uuid(self, value: UUID4, _info):
-        return str(value)
-
     def __repr__(self) -> str:  # pragma: no cover
         return f"BaseEvent(timestamp={self.timestamp.isoformat()}, description={self.description})"
 
     def __str__(self) -> str:  # pragma: no cover
         return str(self.model_dump_json())
+
+
+class BaseCountableEvent(BaseEvent):
+    """
+    Represents a countable event with a time window and number of events.
+
+    Attributes:
+        time_window (int): Time window in seconds.
+        count (int): Number of events in the time window.
+    """
+
+    time_window: int = Field(default=15, description="Time window in seconds")
+    count: int = Field(default=1, description="Number of events in the time window")
+
+    @field_validator("time_window")  # ensure that the time window is greater than 0
+    @classmethod
+    def validate_time_window(cls, value: float):
+        if value <= 0:
+            raise ValueError("Time window must be greater than 0")
+        return value

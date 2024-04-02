@@ -8,6 +8,9 @@
 
 This repo is intended to be the core event tracking framework that will be built-upon in other applications
 
+**Note:** As of now, this is just a personal project. Any advise or contributions towards the direction of this project would be greatly appreciated. Feel free to make a Github Issue/discussion about future work.
+
+
 ## Overview
 In this context, an event is a "log", as a dictionary with pre-defined fields. These fields are defined in Pydantic models, which validate the event during the logging process.
 
