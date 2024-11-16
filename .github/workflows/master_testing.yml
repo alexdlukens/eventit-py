@@ -10,7 +10,7 @@ on:
     branches: ["master"]
 jobs:
   build:
-    runs-on: [self-hosted, ubuntu-latest]
+    runs-on: [self-hosted]
     strategy:
       fail-fast: false
       matrix:
